@@ -46,20 +46,28 @@ func NewMap(lhs, rhs interface{}) (*Map, error) {
 			if lhsEl.IsValid() && rhsEl.IsValid() {
 				diff, err := Diff(lhsEl.Interface(), rhsEl.Interface())
 				if err != nil {
-					return nil, err
+					return &Map{
+						Type:  diff.Diff(),
+						LHS:   lhs,
+						RHS:   rhs,
+						Diffs: diffs,
+					}, err
 				}
 				if diff.Diff() != Identical {
-					Type = ContentDiffer
+					Type = diff.Diff()
 				}
 				diffs[key.Interface()] = diff
 				continue
 			}
-			Type = ContentDiffer
 			if lhsEl.IsValid() {
-				diffs[key.Interface()] = &MapMissing{lhsEl.Interface()}
+				missing := &MapMissing{lhsEl.Interface()}
+				diffs[key.Interface()] = missing
+				Type = missing.Diff()
 				continue
 			}
-			diffs[key.Interface()] = &MapExcess{rhsEl.Interface()}
+			excess := &MapExcess{rhsEl.Interface()}
+			diffs[key.Interface()] = excess
+			Type = excess.Diff()
 		}
 	}
 

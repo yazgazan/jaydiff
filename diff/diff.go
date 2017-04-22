@@ -47,5 +47,18 @@ func Diff(lhs, rhs interface{}) (Differ, error) {
 		return NewMap(lhs, rhs)
 	}
 
-	return &Types{lhs, rhs}, nil
+	return &Types{lhs, rhs}, &Unsupported{lhsVal.Type(), rhsVal.Type()}
+}
+
+func (t Type) String() string {
+	switch t {
+	case Identical:
+		return "identical"
+	case ContentDiffer:
+		return "content differ"
+	case TypesDiffer:
+		return "types differ"
+	}
+
+	return "invalid type"
 }

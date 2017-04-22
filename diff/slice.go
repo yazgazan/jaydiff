@@ -42,21 +42,33 @@ func NewSlice(lhs, rhs interface{}) (*Slice, error) {
 			if i < lhsVal.Len() && i < rhsVal.Len() {
 				diff, err := Diff(lhsVal.Index(i).Interface(), rhsVal.Index(i).Interface())
 				if err != nil {
-					return nil, err
+					return &Slice{
+						Type:  diff.Diff(),
+						LHS:   lhs,
+						RHS:   rhs,
+						Diffs: diffs,
+					}, err
 				}
 				if diff.Diff() != Identical {
-					Type = ContentDiffer
+					Type = diff.Diff()
 				}
 				diffs = append(diffs, diff)
 				continue
 			}
-			Type = ContentDiffer
 			if i >= rhsVal.Len() {
-				diffs = append(diffs, &SliceMissing{lhsVal.Index(i).Interface()})
+				missing := &SliceMissing{lhsVal.Index(i).Interface()}
+				diffs = append(diffs, missing)
+				Type = missing.Diff()
 				continue
 			}
-			diffs = append(diffs, &SliceExcess{rhsVal.Index(i).Interface()})
+			excess := &SliceExcess{rhsVal.Index(i).Interface()}
+			diffs = append(diffs, excess)
+			Type = excess.Diff()
 		}
+	}
+
+	if Type == Identical && lhsVal.IsNil() != rhsVal.IsNil() {
+		Type = ContentDiffer
 	}
 
 	return &Slice{
