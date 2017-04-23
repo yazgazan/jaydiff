@@ -148,10 +148,13 @@ func (s Slice) StringIndent(key, prefix string, conf Output) string {
 }
 
 func (s Slice) Walk(path string, fn WalkFn) error {
-	for _, diff := range s.Diffs {
-		err := walk(s, diff, path+"[]", fn)
+	for i, diff := range s.Diffs {
+		d, err := walk(s, diff, path+"[]", fn)
 		if err != nil {
 			return err
+		}
+		if d != nil {
+			s.Diffs[i] = d
 		}
 	}
 

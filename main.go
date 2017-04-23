@@ -28,7 +28,7 @@ func main() {
 		os.Exit(StatusDiffError)
 	}
 
-	err = pruneIgnore(d, conf.ignore)
+	d, err = pruneIgnore(d, conf.ignore)
 
 	if conf.outputReport {
 		errs, err := diff.Report(d, conf.Output)
@@ -47,28 +47,12 @@ func main() {
 	}
 }
 
-func pruneIgnore(d diff.Differ, ignore patterns) error {
-	return diff.Walk(d, func(parent diff.Differ, d diff.Differ, path string) error {
-		if !ignore.Match(path) {
-			return nil
+func pruneIgnore(d diff.Differ, ignore patterns) (diff.Differ, error) {
+	return diff.Walk(d, func(parent diff.Differ, d diff.Differ, path string) (diff.Differ, error) {
+		if ignore.Match(path) {
+			return &diff.Ignore{}, nil
 		}
-
-		switch t := parent.(type) {
-		case diff.Map:
-			for k, subd := range t.Diffs {
-				if d == subd {
-					t.Diffs[k] = &diff.Ignore{}
-				}
-			}
-		case diff.Slice:
-			for i, subd := range t.Diffs {
-				if d == subd {
-					t.Diffs[i] = &diff.Ignore{}
-				}
-			}
-		}
-
-		return nil
+		return nil, nil
 	})
 }
 

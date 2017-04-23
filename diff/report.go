@@ -9,20 +9,20 @@ func (e ReportError) Error() string {
 func Report(d Differ, outConf Output) ([]error, error) {
 	var errs []error
 
-	err := Walk(d, func(parent, diff Differ, path string) error {
+	_, err := Walk(d, func(parent, diff Differ, path string) (Differ, error) {
 		switch diff.Diff() {
 		case Identical:
-			return nil
+			return nil, nil
 		case TypesDiffer:
 			errs = append(errs, ReportError(diff.StringIndent(" "+path+": ", "", outConf)))
 		case ContentDiffer:
 			if _, ok := diff.(Walker); ok {
-				return nil
+				return nil, nil
 			}
 			errs = append(errs, ReportError(diff.StringIndent(" "+path+": ", "", outConf)))
 		}
 
-		return nil
+		return nil, nil
 	})
 
 	return errs, err

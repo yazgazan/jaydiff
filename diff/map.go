@@ -192,9 +192,12 @@ func (m Map) Walk(path string, fn WalkFn) error {
 
 	for _, k := range keys {
 		diff := m.Diffs[k]
-		err := walk(m, diff, fmt.Sprintf("%s.%v", path, k), fn)
+		d, err := walk(m, diff, fmt.Sprintf("%s.%v", path, k), fn)
 		if err != nil {
 			return err
+		}
+		if d != nil {
+			m.Diffs[k] = d
 		}
 	}
 

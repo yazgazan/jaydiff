@@ -26,29 +26,18 @@ func main() {
 		panic(err)
 	}
 
-	diff.Walk(d, func(parent diff.Differ, d diff.Differ, path string) error {
+	d, err = diff.Walk(d, func(parent diff.Differ, d diff.Differ, path string) (diff.Differ, error) {
 		if shouldIgnore(path) {
-			switch t := parent.(type) {
-			case diff.Map:
-				for k, subd := range t.Diffs {
-					if d == subd {
-						fmt.Println("ignoring")
-						t.Diffs[k] = &diff.Ignore{}
-					}
-				}
-			case diff.Slice:
-				for i, subd := range t.Diffs {
-					if d == subd {
-						fmt.Println("ignoring")
-						t.Diffs[i] = &diff.Ignore{}
-					}
-				}
-			}
+			fmt.Println("ignoring")
+			return &diff.Ignore{}, nil
 		}
 		fmt.Printf("%s: %s (ignore: %v)\n", path, d.Diff(), shouldIgnore(path))
 
-		return nil
+		return nil, nil
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	fmt.Println(d.StringIndent("", "", diff.Output{
 		Indent:    "\t",

@@ -32,9 +32,9 @@ func TestWalk(t *testing.T) {
 			continue
 		}
 
-		err = Walk(d, func(_, diff Differ, _ string) error {
+		_, err = Walk(d, func(_, diff Differ, _ string) (Differ, error) {
 			nCalls++
-			return nil
+			return nil, nil
 		})
 		if err != nil {
 			t.Errorf("Walk(Diff(%+v, %+v)): unexpected error: %s", test.LHS, test.RHS, err)
@@ -66,14 +66,14 @@ func TestWalkError(t *testing.T) {
 			continue
 		}
 
-		err = Walk(d, func(_, diff Differ, _ string) error {
+		_, err = Walk(d, func(_, diff Differ, _ string) (Differ, error) {
 			if s, ok := diff.(*Scalar); ok {
 				if s.LHS == 42 {
-					return expectedErr
+					return nil, expectedErr
 				}
 			}
 
-			return nil
+			return nil, nil
 		})
 		if err != expectedErr {
 			t.Errorf("Walk(Diff(%+v, %+v)): expected error %q, got %q", test.LHS, test.RHS, expectedErr, err)
