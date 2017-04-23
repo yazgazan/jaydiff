@@ -30,7 +30,18 @@ func main() {
 
 	err = pruneIgnore(d, conf.ignore)
 
-	fmt.Println(d.StringIndent("", "", conf.Output))
+	if conf.outputReport {
+		errs, err := diff.Report(d, conf.Output)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: Failed to generate report: %s", err)
+			os.Exit(StatusDiffError)
+		}
+		for _, e := range errs {
+			fmt.Println(e.Error())
+		}
+	} else {
+		fmt.Println(d.StringIndent("", "", conf.Output))
+	}
 	if d.Diff() != diff.Identical {
 		os.Exit(StatusDiffMismatch)
 	}

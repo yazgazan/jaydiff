@@ -180,7 +180,18 @@ func (m Map) StringIndent(keyprefix, prefix string, conf Output) string {
 }
 
 func (m Map) Walk(path string, fn WalkFn) error {
-	for k, diff := range m.Diffs {
+	var keys []interface{}
+
+	for k := range m.Diffs {
+		keys = append(keys, k)
+	}
+
+	sort.Slice(keys, func(i, j int) bool {
+		return strings.Compare(fmt.Sprintf("%v", keys[i]), fmt.Sprintf("%v", keys[j])) == -1
+	})
+
+	for _, k := range keys {
+		diff := m.Diffs[k]
 		err := walk(m, diff, fmt.Sprintf("%s.%v", path, k), fn)
 		if err != nil {
 			return err

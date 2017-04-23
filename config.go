@@ -10,9 +10,10 @@ import (
 
 type config struct {
 	diff.Output
-	ignore  patterns
-	lhsFile string
-	rhsFile string
+	ignore       patterns
+	lhsFile      string
+	rhsFile      string
+	outputReport bool
 }
 
 func readConfig() config {
@@ -20,6 +21,7 @@ func readConfig() config {
 
 	flag.StringVar(&c.Output.Indent, "indent", "    ", "indent string")
 	flag.BoolVar(&c.Output.ShowTypes, "show-types", false, "show types")
+	flag.BoolVar(&c.outputReport, "report", false, "output report format")
 	flag.Var(&c.ignore, "ignore", "paths to ignore (glob)")
 	flag.Parse()
 

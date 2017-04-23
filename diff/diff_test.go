@@ -404,6 +404,46 @@ func TestIgnore(t *testing.T) {
 	}
 }
 
+func TestReport(t *testing.T) {
+	want := []string{
+		"content",
+		"type",
+	}
+
+	d, err := Diff(
+		map[string]interface{}{
+			"match":   5,
+			"content": 6,
+			"type":    8,
+		},
+		map[string]interface{}{
+			"match":   5,
+			"content": 7,
+			"type":    9.0,
+		},
+	)
+	if err != nil {
+		t.Errorf("Diff(...): unexpected error: %s", err)
+		return
+	}
+	errs, err := Report(d, testOutput)
+	if err != nil {
+		t.Errorf("Report(Diff(...), %+v): unexpected error: %s", err, testOutput)
+		return
+	}
+
+	if len(errs) != len(want) {
+		t.Errorf("len(Report(Diff(...), %+v)) = %d, expected %d", testOutput, len(errs), len(want))
+		return
+	}
+
+	for i, e := range errs {
+		if !strings.Contains(e.Error(), want[i]) {
+			t.Errorf("Report(Diff(...), %+v)[%d] = %q, should contain %q", testOutput, i, e.Error(), want[i])
+		}
+	}
+}
+
 func testStrings(context string, t *testing.T, test stringTest, ss []string, indented string) {
 	for i, want := range test.Want {
 		s := ss[i]
