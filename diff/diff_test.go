@@ -51,7 +51,7 @@ func TestDiff(t *testing.T) {
 			Want: ContentDiffer,
 		},
 		{LHS: []interface{}{1, 2, 3}, RHS: []interface{}{1, 2, 3}, Want: Identical},
-		{LHS: []interface{}{1, 2, 3}, RHS: []interface{}{1, 2, 3.3}, Want: TypesDiffer},
+		{LHS: []interface{}{1, 2, 3}, RHS: []interface{}{1, 2, 3.3}, Want: ContentDiffer},
 		{LHS: []interface{}(nil), RHS: []interface{}{1, 2, 3.3}, Want: ContentDiffer},
 		{LHS: []int(nil), RHS: []int{}, Want: ContentDiffer},
 		{LHS: func() {}, RHS: func() {}, Want: TypesDiffer, Error: true},

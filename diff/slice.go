@@ -50,7 +50,7 @@ func NewSlice(lhs, rhs interface{}) (*Slice, error) {
 					}, err
 				}
 				if diff.Diff() != Identical {
-					Type = diff.Diff()
+					Type = ContentDiffer
 				}
 				diffs = append(diffs, diff)
 				continue

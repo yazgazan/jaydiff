@@ -54,7 +54,7 @@ func NewMap(lhs, rhs interface{}) (*Map, error) {
 					}, err
 				}
 				if diff.Diff() != Identical {
-					Type = diff.Diff()
+					Type = ContentDiffer
 				}
 				diffs[key.Interface()] = diff
 				continue
