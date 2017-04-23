@@ -18,12 +18,6 @@ type Differ interface {
 	StringIndent(key, prefix string, conf Output) string
 }
 
-type Comparaison struct {
-	Type
-	LHS Differ
-	RHS Differ
-}
-
 func Diff(lhs, rhs interface{}) (Differ, error) {
 	lhsVal := reflect.ValueOf(lhs)
 	rhsVal := reflect.ValueOf(rhs)
