@@ -3,11 +3,11 @@ package diff
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 )
 
 type Map struct {
-	Type
 	Diffs map[interface{}]Differ
 	LHS   interface{}
 	RHS   interface{}
@@ -22,8 +22,61 @@ type MapExcess struct {
 }
 
 func NewMap(lhs, rhs interface{}) (*Map, error) {
-	var Type = Identical
 	var diffs = make(map[interface{}]Differ)
+
+	lhsVal := reflect.ValueOf(lhs)
+	rhsVal := reflect.ValueOf(rhs)
+
+	if typesDiffer, err := mapTypesDiffer(lhs, rhs); err != nil {
+		return &Map{
+			LHS:   lhs,
+			RHS:   rhs,
+			Diffs: diffs,
+		}, err
+	} else if !typesDiffer {
+		keys := getKeys(lhsVal, rhsVal)
+
+		for _, key := range keys {
+			lhsEl := lhsVal.MapIndex(key)
+			rhsEl := rhsVal.MapIndex(key)
+
+			if lhsEl.IsValid() && rhsEl.IsValid() {
+				diff, err := Diff(lhsEl.Interface(), rhsEl.Interface())
+				if diff.Diff() != Identical {
+				}
+				diffs[key.Interface()] = diff
+
+				if err != nil {
+					return &Map{
+						LHS:   lhs,
+						RHS:   rhs,
+						Diffs: diffs,
+					}, err
+				}
+				continue
+			}
+			if lhsEl.IsValid() {
+				diffs[key.Interface()] = &MapMissing{lhsEl.Interface()}
+				continue
+			}
+			diffs[key.Interface()] = &MapExcess{rhsEl.Interface()}
+		}
+	}
+
+	return &Map{
+		LHS:   lhs,
+		RHS:   rhs,
+		Diffs: diffs,
+	}, nil
+}
+
+func mapTypesDiffer(lhs, rhs interface{}) (bool, error) {
+	if lhs == nil {
+		return true, InvalidType{Value: lhs, For: "map"}
+	}
+	if rhs == nil {
+		return true, InvalidType{Value: rhs, For: "map"}
+	}
 
 	lhsVal := reflect.ValueOf(lhs)
 	lhsElType := lhsVal.Type().Elem()
@@ -33,54 +86,28 @@ func NewMap(lhs, rhs interface{}) (*Map, error) {
 	rhsKeyType := rhsVal.Type().Key()
 
 	if lhsElType.Kind() != rhsElType.Kind() {
-		Type = TypesDiffer
+		return true, nil
 	} else if lhsKeyType.Kind() != rhsKeyType.Kind() {
-		Type = TypesDiffer
-	} else {
-		keys := getKeys(lhsVal, rhsVal)
-
-		for _, key := range keys {
-			lhsEl := lhsVal.MapIndex(key)
-			rhsEl := rhsVal.MapIndex(key)
-
-			if lhsEl.IsValid() && rhsEl.IsValid() {
-				diff, err := Diff(lhsEl.Interface(), rhsEl.Interface())
-				if err != nil {
-					return &Map{
-						Type:  diff.Diff(),
-						LHS:   lhs,
-						RHS:   rhs,
-						Diffs: diffs,
-					}, err
-				}
-				if diff.Diff() != Identical {
-					Type = ContentDiffer
-				}
-				diffs[key.Interface()] = diff
-				continue
-			}
-			if lhsEl.IsValid() {
-				missing := &MapMissing{lhsEl.Interface()}
-				diffs[key.Interface()] = missing
-				Type = missing.Diff()
-				continue
-			}
-			excess := &MapExcess{rhsEl.Interface()}
-			diffs[key.Interface()] = excess
-			Type = excess.Diff()
-		}
+		return true, nil
 	}
 
-	return &Map{
-		Type:  Type,
-		LHS:   lhs,
-		RHS:   rhs,
-		Diffs: diffs,
-	}, nil
+	return false, nil
 }
 
 func (m Map) Diff() Type {
-	return m.Type
+	if ok, err := mapTypesDiffer(m.LHS, m.RHS); err != nil {
+		return Invalid
+	} else if ok {
+		return TypesDiffer
+	}
+
+	for _, d := range m.Diffs {
+		if d.Diff() != Identical {
+			return ContentDiffer
+		}
+	}
+
+	return Identical
 }
 
 func (m Map) Strings() []string {
@@ -94,8 +121,18 @@ func (m Map) Strings() []string {
 		}
 	case ContentDiffer:
 		var ss = []string{"{"}
+		var keys []interface{}
 
-		for key, d := range m.Diffs {
+		for key := range m.Diffs {
+			keys = append(keys, key)
+		}
+
+		sort.Slice(keys, func(i, j int) bool {
+			return strings.Compare(fmt.Sprintf("%v", keys[i]), fmt.Sprintf("%v", keys[j])) == -1
+		})
+
+		for _, key := range keys {
+			d := m.Diffs[key]
 			for _, s := range d.Strings() {
 				ss = append(ss, fmt.Sprintf("%v: %s", key, s))
 			}
@@ -115,22 +152,43 @@ func (m Map) StringIndent(keyprefix, prefix string, conf Output) string {
 		return "-" + prefix + keyprefix + conf.Red(m.LHS) + "\n" +
 			"+" + prefix + keyprefix + conf.Green(m.RHS)
 	case ContentDiffer:
-		var ss = []string{prefix + keyprefix + conf.Type(m.LHS) + "map["}
+		var ss = []string{" " + prefix + keyprefix + conf.Type(m.LHS) + "map["}
+		var keys []interface{}
 
-		for key, d := range m.Diffs {
-			keyStr := fmt.Sprintf("%v: ", key)
-			ss = append(
-				ss,
-				d.StringIndent(keyStr, prefix+conf.Indent, conf),
-			)
+		for key := range m.Diffs {
+			keys = append(keys, key)
 		}
 
-		return strings.Join(append(ss, prefix+"]"), "\n")
+		sort.Slice(keys, func(i, j int) bool {
+			return strings.Compare(fmt.Sprintf("%v", keys[i]), fmt.Sprintf("%v", keys[j])) == -1
+		})
+
+		for _, key := range keys {
+			d := m.Diffs[key]
+
+			keyStr := fmt.Sprintf("%v: ", key)
+			s := d.StringIndent(keyStr, prefix+conf.Indent, conf)
+			if s != "" {
+				ss = append(ss, s)
+			}
+		}
+
+		return strings.Join(append(ss, " "+prefix+"]"), "\n")
 	}
 
 	return ""
 }
 
+func (m Map) Walk(path string, fn WalkFn) error {
+	for k, diff := range m.Diffs {
+		err := walk(m, diff, fmt.Sprintf("%s.%v", path, k), fn)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 func getKeys(lhs, rhs reflect.Value) []reflect.Value {
 	keys := lhs.MapKeys()
 

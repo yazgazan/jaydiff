@@ -10,6 +10,7 @@ const (
 	TypesDiffer Type = iota
 	ContentDiffer
 	Identical
+	Invalid
 )
 
 type Differ interface {

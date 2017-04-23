@@ -28,10 +28,37 @@ func main() {
 		os.Exit(StatusDiffError)
 	}
 
+	err = pruneIgnore(d, conf.ignore)
+
 	fmt.Println(d.StringIndent("", "", conf.Output))
 	if d.Diff() != diff.Identical {
 		os.Exit(StatusDiffMismatch)
 	}
+}
+
+func pruneIgnore(d diff.Differ, ignore patterns) error {
+	return diff.Walk(d, func(parent diff.Differ, d diff.Differ, path string) error {
+		if !ignore.Match(path) {
+			return nil
+		}
+
+		switch t := parent.(type) {
+		case diff.Map:
+			for k, subd := range t.Diffs {
+				if d == subd {
+					t.Diffs[k] = &diff.Ignore{}
+				}
+			}
+		case diff.Slice:
+			for i, subd := range t.Diffs {
+				if d == subd {
+					t.Diffs[i] = &diff.Ignore{}
+				}
+			}
+		}
+
+		return nil
+	})
 }
 
 func parseFile(fname string) interface{} {

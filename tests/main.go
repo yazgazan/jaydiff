@@ -1,86 +1,84 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"strings"
+
 	"github.com/Pimmr/json-diff/diff"
 )
 
 func main() {
-	tests := []struct {
-		lhs interface{}
-		rhs interface{}
-	}{
-		{42, 4.2},
-		{10, "toto"},
-		{4, 4},
-		{2, 5},
-		{[]int{1, 2}, []int{3, 4}},
-		{[]int{1, 2}, []int{1, 2}},
-		{[]int{1, 2, 4}, []int{1, 2}},
-		{[]int{1, 2}, []int{1, 2, 23}},
-		{
-			[][]int{{1, 2}, {3, 4}},
-			[][]int{{1, 2}, {6, 8}},
-		},
-		{
-			[][][]int{
-				{{1, 2}, {3, 4}},
-				{{5, 6}, {7, 8}},
-			},
-			[][][]int{
-				{{1, 2}, {3, 4}},
-				{{5, -4}, {7, 8}},
-			},
-		},
-		{
-			map[string]int{"toto": 42},
-			map[string]int{"toto": 42},
-		},
-		{
-			map[string]int{"toto": 42},
-			map[string]int{"toto": 44},
-		},
-		{
-			map[string][]int{"toto": {1, 2}},
-			map[string][]int{"toto": {1, 3}},
-		},
-		{
-			map[string][]int{"toto": {1, 2}},
-			map[string][]int{"tata": {1, 3}},
-		},
-		{
-			map[string]interface{}{
-				"titi": 42,
-				"toto": "hop",
-				"yo":   4.2,
-				"haha": 1,
-			},
-			map[string]interface{}{
-				"titi": 43,
-				"toto": 21,
-				"yo":   4.2,
-				"plop": []int{1, 2},
-			},
-		},
-		{
-			map[string]interface{}{
-				"titi": 42,
-				"toto": "hop",
-				"yo":   4.2,
-			},
-			map[string][]int{"tata": {1, 3}},
-		},
+	lhs, err := read("tests/lhs.json")
+	if err != nil {
+		panic(err)
 	}
 
-	for _, test := range tests {
-		d, _ := diff.Diff(test.lhs, test.rhs)
-
-		fmt.Printf("%v, %v:\n", test.lhs, test.rhs)
-		fmt.Println(d.StringIndent("", "", diff.Output{
-			Indent:    "    ",
-			Colorized: true,
-			ShowTypes: true,
-		}))
-		fmt.Println()
+	rhs, err := read("tests/rhs.json")
+	if err != nil {
+		panic(err)
 	}
+
+	d, err := diff.Diff(lhs, rhs)
+	if err != nil {
+		panic(err)
+	}
+
+	diff.Walk(d, func(parent diff.Differ, d diff.Differ, path string) error {
+		if shouldIgnore(path) {
+			switch t := parent.(type) {
+			case diff.Map:
+				for k, subd := range t.Diffs {
+					if d == subd {
+						fmt.Println("ignoring")
+						t.Diffs[k] = &diff.Ignore{}
+					}
+				}
+			case diff.Slice:
+				for i, subd := range t.Diffs {
+					if d == subd {
+						fmt.Println("ignoring")
+						t.Diffs[i] = &diff.Ignore{}
+					}
+				}
+			}
+		}
+		fmt.Printf("%s: %s (ignore: %v)\n", path, d.Diff(), shouldIgnore(path))
+
+		return nil
+	})
+
+	fmt.Println(d.StringIndent("", "", diff.Output{
+		Indent:    "\t",
+		Colorized: true,
+	}))
+
+	if d.Diff() != diff.Identical {
+		os.Exit(1)
+	}
+}
+
+func shouldIgnore(path string) bool {
+	switch path {
+	case ".e", ".d", ".c.a", ".c.c":
+		return true
+	}
+
+	return strings.HasSuffix(path, ".b")
+}
+
+func read(fname string) (interface{}, error) {
+	var err error
+	var v interface{}
+
+	b, err := ioutil.ReadFile(fname)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(b, &v)
+
+	return v, err
 }
