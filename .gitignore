@@ -18,4 +18,6 @@
 .glide/
 
 # End of https://www.gitignore.io/api/go
-json-diff
+
+jaydiff
+
