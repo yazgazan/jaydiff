@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Pimmr/json-diff/diff"
+	"github.com/yazgazan/jaydiff/diff"
 )
 
 func main() {

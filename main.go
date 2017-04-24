@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Pimmr/json-diff/diff"
+	"github.com/yazgazan/jaydiff/diff"
 	"io/ioutil"
 	"os"
 )

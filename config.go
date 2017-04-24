@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/Pimmr/json-diff/diff"
+	"github.com/yazgazan/jaydiff/diff"
 	"golang.org/x/crypto/ssh/terminal"
 	"os"
 )
