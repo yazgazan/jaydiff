@@ -67,7 +67,7 @@ func TestWalkError(t *testing.T) {
 		}
 
 		_, err = Walk(d, func(_, diff Differ, _ string) (Differ, error) {
-			if IsScalar(diff) {
+			if _, ok := diff.(scalar); ok {
 				return nil, expectedErr
 			}
 

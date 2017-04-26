@@ -9,12 +9,6 @@ type types struct {
 	rhs interface{}
 }
 
-func IsTypes(d Differ) bool {
-	_, ok := d.(types)
-
-	return ok
-}
-
 func (t types) Diff() Type {
 	return TypesDiffer
 }

@@ -70,12 +70,6 @@ func newMap(lhs, rhs interface{}) (mapDiff, error) {
 	}, nil
 }
 
-func IsMap(d Differ) bool {
-	_, ok := d.(mapDiff)
-
-	return ok
-}
-
 func mapTypesDiffer(lhs, rhs interface{}) (bool, error) {
 	if lhs == nil {
 		return true, ErrInvalidType{Value: lhs, For: "map"}
@@ -230,12 +224,6 @@ func getKeys(lhs, rhs reflect.Value) []reflect.Value {
 	return keys
 }
 
-func IsMapMissing(d Differ) bool {
-	_, ok := d.(mapMissing)
-
-	return ok
-}
-
 func (m mapMissing) Diff() Type {
 	return ContentDiffer
 }
@@ -249,12 +237,6 @@ func (m mapMissing) Strings() []string {
 func (m mapMissing) StringIndent(key, prefix string, conf Output) string {
 	return "-" + prefix + key + conf.red(m.value) +
 		"\n+" + prefix + key
-}
-
-func IsMapExcess(d Differ) bool {
-	_, ok := d.(mapExcess)
-
-	return ok
 }
 
 func (e mapExcess) Diff() Type {

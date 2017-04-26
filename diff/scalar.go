@@ -10,12 +10,6 @@ type scalar struct {
 	rhs interface{}
 }
 
-func IsScalar(d Differ) bool {
-	_, ok := d.(scalar)
-
-	return ok
-}
-
 func (s scalar) Diff() Type {
 	lhsVal := reflect.ValueOf(s.lhs)
 	rhsVal := reflect.ValueOf(s.rhs)

@@ -68,12 +68,6 @@ func newSlice(lhs, rhs interface{}) (Differ, error) {
 	}, nil
 }
 
-func IsSlice(d Differ) bool {
-	_, ok := d.(slice)
-
-	return ok
-}
-
 func sliceTypesDiffer(lhs, rhs interface{}) (bool, error) {
 	if lhs == nil {
 		return true, ErrInvalidType{Value: lhs, For: "slice"}
@@ -165,12 +159,6 @@ func (s slice) Walk(path string, fn WalkFn) error {
 	return nil
 }
 
-func IsSliceMissing(d Differ) bool {
-	_, ok := d.(sliceMissing)
-
-	return ok
-}
-
 func (m sliceMissing) Diff() Type {
 	return ContentDiffer
 }
@@ -188,12 +176,6 @@ func (m sliceMissing) StringIndent(key, prefix string, conf Output) string {
 
 func (e sliceExcess) Diff() Type {
 	return ContentDiffer
-}
-
-func IsSliceExcess(d Differ) bool {
-	_, ok := d.(sliceExcess)
-
-	return ok
 }
 
 func (e sliceExcess) Strings() []string {
