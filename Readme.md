@@ -5,5 +5,24 @@
 [![Build Status](https://travis-ci.org/yazgazan/jaydiff.svg?branch=master)](https://travis-ci.org/yazgazan/jaydiff)
 [![Coverage Status](https://coveralls.io/repos/github/yazgazan/jaydiff/badge.svg?branch=master)](https://coveralls.io/github/yazgazan/jaydiff?branch=master)
 
-Todo: Readme
+# Install
+
+Todo: install
+
+# Usage
+
+Todo: usage
+
+# Todo
+
+- Readme
+- Cleanup api
+- Document lib
+- Examples (lib)
+
+# Ideas
+
+- Handle cyclic maps/structures properly
+- JayPatch
+- Have the diff lib support more types (Structs, interfaces (?), Arrays, ...)
 
