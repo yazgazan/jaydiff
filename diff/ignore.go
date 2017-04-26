@@ -1,15 +1,25 @@
 package diff
 
-type Ignore struct{}
+type ignore struct{}
 
-func (t Ignore) Diff() Type {
+func Ignore() (Differ, error) {
+	return ignore{}, nil
+}
+
+func IsIgnore(d Differ) bool {
+	_, ok := d.(ignore)
+
+	return ok
+}
+
+func (t ignore) Diff() Type {
 	return Identical
 }
 
-func (t Ignore) Strings() []string {
+func (t ignore) Strings() []string {
 	return []string{}
 }
 
-func (t Ignore) StringIndent(key, prefix string, conf Output) string {
+func (t ignore) StringIndent(key, prefix string, conf Output) string {
 	return ""
 }

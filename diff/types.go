@@ -4,23 +4,29 @@ import (
 	"fmt"
 )
 
-type Types struct {
-	LHS interface{}
-	RHS interface{}
+type types struct {
+	lhs interface{}
+	rhs interface{}
 }
 
-func (t Types) Diff() Type {
+func IsTypes(d Differ) bool {
+	_, ok := d.(types)
+
+	return ok
+}
+
+func (t types) Diff() Type {
 	return TypesDiffer
 }
 
-func (t Types) Strings() []string {
+func (t types) Strings() []string {
 	return []string{
-		fmt.Sprintf("- %T %v", t.LHS, t.LHS),
-		fmt.Sprintf("+ %T %v", t.RHS, t.RHS),
+		fmt.Sprintf("- %T %v", t.lhs, t.lhs),
+		fmt.Sprintf("+ %T %v", t.rhs, t.rhs),
 	}
 }
 
-func (t Types) StringIndent(key, prefix string, conf Output) string {
-	return "-" + prefix + key + conf.Red(t.LHS) + "\n" +
-		"+" + prefix + key + conf.Green(t.RHS)
+func (t types) StringIndent(key, prefix string, conf Output) string {
+	return "-" + prefix + key + conf.red(t.lhs) + "\n" +
+		"+" + prefix + key + conf.green(t.rhs)
 }

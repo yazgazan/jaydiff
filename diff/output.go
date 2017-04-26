@@ -11,7 +11,7 @@ type Output struct {
 	ShowTypes bool
 }
 
-func (o Output) Red(v interface{}) string {
+func (o Output) red(v interface{}) string {
 	var s string
 
 	if o.ShowTypes {
@@ -27,7 +27,7 @@ func (o Output) Red(v interface{}) string {
 	return color.RedString("%s", s)
 }
 
-func (o Output) Green(v interface{}) string {
+func (o Output) green(v interface{}) string {
 	var s string
 
 	if o.ShowTypes {
@@ -43,7 +43,7 @@ func (o Output) Green(v interface{}) string {
 	return color.GreenString("%s", s)
 }
 
-func (o Output) White(v interface{}) string {
+func (o Output) white(v interface{}) string {
 	var s string
 
 	if o.ShowTypes {
@@ -55,7 +55,7 @@ func (o Output) White(v interface{}) string {
 	return fmt.Sprintf("%s", s)
 }
 
-func (o Output) Type(v interface{}) string {
+func (o Output) typ(v interface{}) string {
 	if o.ShowTypes {
 		return fmt.Sprintf("%T ", v)
 	}

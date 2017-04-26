@@ -48,13 +48,13 @@ func TestOutput(t *testing.T) {
 			WantType: []string{"int"},
 		},
 	} {
-		red := test.Output.Red(5)
+		red := test.Output.red(5)
 		testOut(t, "Output.Red(5)", red, test.WantVal)
-		green := test.Output.Green(5)
+		green := test.Output.green(5)
 		testOut(t, "Output.Green(5)", green, test.WantVal)
-		white := test.Output.White(5)
+		white := test.Output.white(5)
 		testOut(t, "Output.White(5)", white, test.WantVal)
-		typ := test.Output.Type(5)
+		typ := test.Output.typ(5)
 		testOut(t, "Output.Type(5)", typ, test.WantType)
 	}
 }

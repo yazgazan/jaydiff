@@ -7,31 +7,31 @@ import (
 	"strings"
 )
 
-type Map struct {
-	Diffs map[interface{}]Differ
-	LHS   interface{}
-	RHS   interface{}
+type mapDiff struct {
+	diffs map[interface{}]Differ
+	lhs   interface{}
+	rhs   interface{}
 }
 
-type MapMissing struct {
-	Value interface{}
+type mapMissing struct {
+	value interface{}
 }
 
-type MapExcess struct {
-	Value interface{}
+type mapExcess struct {
+	value interface{}
 }
 
-func NewMap(lhs, rhs interface{}) (*Map, error) {
+func newMap(lhs, rhs interface{}) (mapDiff, error) {
 	var diffs = make(map[interface{}]Differ)
 
 	lhsVal := reflect.ValueOf(lhs)
 	rhsVal := reflect.ValueOf(rhs)
 
 	if typesDiffer, err := mapTypesDiffer(lhs, rhs); err != nil {
-		return &Map{
-			LHS:   lhs,
-			RHS:   rhs,
-			Diffs: diffs,
+		return mapDiff{
+			lhs:   lhs,
+			rhs:   rhs,
+			diffs: diffs,
 		}, err
 	} else if !typesDiffer {
 		keys := getKeys(lhsVal, rhsVal)
@@ -47,35 +47,41 @@ func NewMap(lhs, rhs interface{}) (*Map, error) {
 				diffs[key.Interface()] = diff
 
 				if err != nil {
-					return &Map{
-						LHS:   lhs,
-						RHS:   rhs,
-						Diffs: diffs,
+					return mapDiff{
+						lhs:   lhs,
+						rhs:   rhs,
+						diffs: diffs,
 					}, err
 				}
 				continue
 			}
 			if lhsEl.IsValid() {
-				diffs[key.Interface()] = &MapMissing{lhsEl.Interface()}
+				diffs[key.Interface()] = mapMissing{lhsEl.Interface()}
 				continue
 			}
-			diffs[key.Interface()] = &MapExcess{rhsEl.Interface()}
+			diffs[key.Interface()] = mapExcess{rhsEl.Interface()}
 		}
 	}
 
-	return &Map{
-		LHS:   lhs,
-		RHS:   rhs,
-		Diffs: diffs,
+	return mapDiff{
+		lhs:   lhs,
+		rhs:   rhs,
+		diffs: diffs,
 	}, nil
+}
+
+func IsMap(d Differ) bool {
+	_, ok := d.(mapDiff)
+
+	return ok
 }
 
 func mapTypesDiffer(lhs, rhs interface{}) (bool, error) {
 	if lhs == nil {
-		return true, InvalidType{Value: lhs, For: "map"}
+		return true, ErrInvalidType{Value: lhs, For: "map"}
 	}
 	if rhs == nil {
-		return true, InvalidType{Value: rhs, For: "map"}
+		return true, ErrInvalidType{Value: rhs, For: "map"}
 	}
 
 	lhsVal := reflect.ValueOf(lhs)
@@ -94,14 +100,14 @@ func mapTypesDiffer(lhs, rhs interface{}) (bool, error) {
 	return false, nil
 }
 
-func (m Map) Diff() Type {
-	if ok, err := mapTypesDiffer(m.LHS, m.RHS); err != nil {
+func (m mapDiff) Diff() Type {
+	if ok, err := mapTypesDiffer(m.lhs, m.rhs); err != nil {
 		return Invalid
 	} else if ok {
 		return TypesDiffer
 	}
 
-	for _, d := range m.Diffs {
+	for _, d := range m.diffs {
 		if d.Diff() != Identical {
 			return ContentDiffer
 		}
@@ -110,20 +116,20 @@ func (m Map) Diff() Type {
 	return Identical
 }
 
-func (m Map) Strings() []string {
+func (m mapDiff) Strings() []string {
 	switch m.Diff() {
 	case Identical:
-		return []string{fmt.Sprintf("  %T %v", m.LHS, m.LHS)}
+		return []string{fmt.Sprintf("  %T %v", m.lhs, m.lhs)}
 	case TypesDiffer:
 		return []string{
-			fmt.Sprintf("- %T %v", m.LHS, m.LHS),
-			fmt.Sprintf("+ %T %v", m.RHS, m.RHS),
+			fmt.Sprintf("- %T %v", m.lhs, m.lhs),
+			fmt.Sprintf("+ %T %v", m.rhs, m.rhs),
 		}
 	case ContentDiffer:
 		var ss = []string{"{"}
 		var keys []interface{}
 
-		for key := range m.Diffs {
+		for key := range m.diffs {
 			keys = append(keys, key)
 		}
 
@@ -132,7 +138,7 @@ func (m Map) Strings() []string {
 		})
 
 		for _, key := range keys {
-			d := m.Diffs[key]
+			d := m.diffs[key]
 			for _, s := range d.Strings() {
 				ss = append(ss, fmt.Sprintf("%v: %s", key, s))
 			}
@@ -144,18 +150,18 @@ func (m Map) Strings() []string {
 	return []string{}
 }
 
-func (m Map) StringIndent(keyprefix, prefix string, conf Output) string {
+func (m mapDiff) StringIndent(keyprefix, prefix string, conf Output) string {
 	switch m.Diff() {
 	case Identical:
-		return "  " + prefix + keyprefix + conf.White(m.LHS)
+		return "  " + prefix + keyprefix + conf.white(m.lhs)
 	case TypesDiffer:
-		return "-" + prefix + keyprefix + conf.Red(m.LHS) + "\n" +
-			"+" + prefix + keyprefix + conf.Green(m.RHS)
+		return "-" + prefix + keyprefix + conf.red(m.lhs) + "\n" +
+			"+" + prefix + keyprefix + conf.green(m.rhs)
 	case ContentDiffer:
-		var ss = []string{" " + prefix + keyprefix + conf.Type(m.LHS) + "map["}
+		var ss = []string{" " + prefix + keyprefix + conf.typ(m.lhs) + "map["}
 		var keys []interface{}
 
-		for key := range m.Diffs {
+		for key := range m.diffs {
 			keys = append(keys, key)
 		}
 
@@ -164,7 +170,7 @@ func (m Map) StringIndent(keyprefix, prefix string, conf Output) string {
 		})
 
 		for _, key := range keys {
-			d := m.Diffs[key]
+			d := m.diffs[key]
 
 			keyStr := fmt.Sprintf("%v: ", key)
 			s := d.StringIndent(keyStr, prefix+conf.Indent, conf)
@@ -179,10 +185,10 @@ func (m Map) StringIndent(keyprefix, prefix string, conf Output) string {
 	return ""
 }
 
-func (m Map) Walk(path string, fn WalkFn) error {
+func (m mapDiff) Walk(path string, fn WalkFn) error {
 	var keys []interface{}
 
-	for k := range m.Diffs {
+	for k := range m.diffs {
 		keys = append(keys, k)
 	}
 
@@ -191,13 +197,13 @@ func (m Map) Walk(path string, fn WalkFn) error {
 	})
 
 	for _, k := range keys {
-		diff := m.Diffs[k]
+		diff := m.diffs[k]
 		d, err := walk(m, diff, fmt.Sprintf("%s.%v", path, k), fn)
 		if err != nil {
 			return err
 		}
 		if d != nil {
-			m.Diffs[k] = d
+			m.diffs[k] = d
 		}
 	}
 
@@ -224,32 +230,44 @@ func getKeys(lhs, rhs reflect.Value) []reflect.Value {
 	return keys
 }
 
-func (m MapMissing) Diff() Type {
+func IsMapMissing(d Differ) bool {
+	_, ok := d.(mapMissing)
+
+	return ok
+}
+
+func (m mapMissing) Diff() Type {
 	return ContentDiffer
 }
 
-func (m MapMissing) Strings() []string {
+func (m mapMissing) Strings() []string {
 	return []string{
-		fmt.Sprintf("- %T %v", m.Value, m.Value),
+		fmt.Sprintf("- %T %v", m.value, m.value),
 	}
 }
 
-func (m MapMissing) StringIndent(key, prefix string, conf Output) string {
-	return "-" + prefix + key + conf.Red(m.Value) +
+func (m mapMissing) StringIndent(key, prefix string, conf Output) string {
+	return "-" + prefix + key + conf.red(m.value) +
 		"\n+" + prefix + key
 }
 
-func (e MapExcess) Diff() Type {
+func IsMapExcess(d Differ) bool {
+	_, ok := d.(mapExcess)
+
+	return ok
+}
+
+func (e mapExcess) Diff() Type {
 	return ContentDiffer
 }
 
-func (e MapExcess) Strings() []string {
+func (e mapExcess) Strings() []string {
 	return []string{
-		fmt.Sprintf("+ %T %v", e.Value, e.Value),
+		fmt.Sprintf("+ %T %v", e.value, e.value),
 	}
 }
 
-func (e MapExcess) StringIndent(key, prefix string, conf Output) string {
+func (e mapExcess) StringIndent(key, prefix string, conf Output) string {
 	return "-" + prefix + key +
-		"\n+" + prefix + key + conf.Green(e.Value)
+		"\n+" + prefix + key + conf.green(e.value)
 }

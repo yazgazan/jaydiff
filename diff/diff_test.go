@@ -118,7 +118,7 @@ func TestTypes(t *testing.T) {
 			},
 		},
 	} {
-		typ := &Types{test.LHS, test.RHS}
+		typ := types{test.LHS, test.RHS}
 
 		if typ.Diff() != TypesDiffer {
 			t.Errorf("Types.Diff() = %q, expected %q", typ.Diff(), TypesDiffer)
@@ -159,7 +159,7 @@ func TestScalar(t *testing.T) {
 			Type: TypesDiffer,
 		},
 	} {
-		typ := &Scalar{test.LHS, test.RHS}
+		typ := scalar{test.LHS, test.RHS}
 
 		if typ.Diff() != test.Type {
 			t.Errorf("Types.Diff() = %q, expected %q", typ.Diff(), test.Type)
@@ -223,7 +223,7 @@ func TestSlice(t *testing.T) {
 			Type: ContentDiffer,
 		},
 	} {
-		typ, err := NewSlice(test.LHS, test.RHS)
+		typ, err := newSlice(test.LHS, test.RHS)
 
 		if err != nil {
 			t.Errorf("NewSlice(%+v, %+v): unexpected error: %q", test.LHS, test.RHS, err)
@@ -238,8 +238,8 @@ func TestSlice(t *testing.T) {
 		testStrings("TestSlice", t, test, ss, indented)
 	}
 
-	invalid, err := NewSlice(nil, nil)
-	if invalidErr, ok := err.(InvalidType); ok {
+	invalid, err := newSlice(nil, nil)
+	if invalidErr, ok := err.(ErrInvalidType); ok {
 		if !strings.Contains(invalidErr.Error(), "nil") {
 			t.Errorf("NewSlice(nil, nil): unexpected format for InvalidType error: got %s", err)
 		}
@@ -256,8 +256,8 @@ func TestSlice(t *testing.T) {
 		t.Errorf("invalidSlice.StringIndent(%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
 	}
 
-	invalid, err = NewSlice([]int{}, nil)
-	if invalidErr, ok := err.(InvalidType); ok {
+	invalid, err = newSlice([]int{}, nil)
+	if invalidErr, ok := err.(ErrInvalidType); ok {
 		if !strings.Contains(invalidErr.Error(), "nil") {
 			t.Errorf("NewSlice([]int{}, nil): unexpected format for InvalidType error: got %s", err)
 		}
@@ -338,7 +338,7 @@ func TestMap(t *testing.T) {
 			Type: ContentDiffer,
 		},
 	} {
-		m, err := NewMap(test.LHS, test.RHS)
+		m, err := newMap(test.LHS, test.RHS)
 
 		if err != nil {
 			t.Errorf("NewMap(%+v, %+v): unexpected error: %q", test.LHS, test.RHS, err)
@@ -353,8 +353,8 @@ func TestMap(t *testing.T) {
 		testStrings(fmt.Sprintf("TestMap[%d]", i), t, test, ss, indented)
 	}
 
-	invalid, err := NewMap(nil, nil)
-	if invalidErr, ok := err.(InvalidType); ok {
+	invalid, err := newMap(nil, nil)
+	if invalidErr, ok := err.(ErrInvalidType); ok {
 		if !strings.Contains(invalidErr.Error(), "nil") {
 			t.Errorf("NewMap(nil, nil): unexpected format for InvalidType error: got %s", err)
 		}
@@ -371,8 +371,8 @@ func TestMap(t *testing.T) {
 		t.Errorf("invalidMap.StringIndent(%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
 	}
 
-	invalid, err = NewMap(map[int]int{}, nil)
-	if invalidErr, ok := err.(InvalidType); ok {
+	invalid, err = newMap(map[int]int{}, nil)
+	if invalidErr, ok := err.(ErrInvalidType); ok {
 		if !strings.Contains(invalidErr.Error(), "nil") {
 			t.Errorf("NewMap(map[int]int{}, nil): unexpected format for InvalidType error: got %s", err)
 		}
@@ -391,16 +391,16 @@ func TestMap(t *testing.T) {
 }
 
 func TestIgnore(t *testing.T) {
-	ignore := Ignore{}
+	ignoreDiff, _ := Ignore()
 
-	if ignore.Diff() != Identical {
-		t.Errorf("Ignore{}.Diff() = %q, expected %q", ignore.Diff(), Identical)
+	if ignoreDiff.Diff() != Identical {
+		t.Errorf("NewIgnore().Diff() = %q, expected %q", ignoreDiff.Diff(), Identical)
 	}
-	if len(ignore.Strings()) != 0 {
-		t.Errorf("len(Ignore{}.Strings()) = %d, expected 0", len(ignore.Strings()))
+	if len(ignoreDiff.Strings()) != 0 {
+		t.Errorf("len(NewIgnore().Strings()) = %d, expected 0", len(ignoreDiff.Strings()))
 	}
-	if indented := ignore.StringIndent(testKey, testPrefix, testOutput); indented != "" {
-		t.Errorf("Ignore{}.StringIndent(...) = %q, expected %q", indented, "")
+	if indented := ignoreDiff.StringIndent(testKey, testPrefix, testOutput); indented != "" {
+		t.Errorf("NewIgnore().StringIndent(...) = %q, expected %q", indented, "")
 	}
 }
 

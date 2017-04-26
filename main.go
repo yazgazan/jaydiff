@@ -50,7 +50,7 @@ func main() {
 func pruneIgnore(d diff.Differ, ignore patterns) (diff.Differ, error) {
 	return diff.Walk(d, func(parent diff.Differ, d diff.Differ, path string) (diff.Differ, error) {
 		if ignore.Match(path) {
-			return &diff.Ignore{}, nil
+			return diff.Ignore()
 		}
 		return nil, nil
 	})

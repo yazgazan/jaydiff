@@ -6,30 +6,30 @@ import (
 	"strings"
 )
 
-type Slice struct {
-	Diffs []Differ
-	LHS   interface{}
-	RHS   interface{}
+type slice struct {
+	diffs []Differ
+	lhs   interface{}
+	rhs   interface{}
 }
 
-type SliceMissing struct {
-	Value interface{}
+type sliceMissing struct {
+	value interface{}
 }
 
-type SliceExcess struct {
-	Value interface{}
+type sliceExcess struct {
+	value interface{}
 }
 
-func NewSlice(lhs, rhs interface{}) (*Slice, error) {
+func newSlice(lhs, rhs interface{}) (Differ, error) {
 	var diffs []Differ
 
 	lhsVal := reflect.ValueOf(lhs)
 	rhsVal := reflect.ValueOf(rhs)
 
 	if typesDiffer, err := sliceTypesDiffer(lhs, rhs); err != nil {
-		return &Slice{
-			LHS: lhs,
-			RHS: rhs,
+		return slice{
+			lhs: lhs,
+			rhs: rhs,
 		}, err
 	} else if !typesDiffer {
 		nElems := lhsVal.Len()
@@ -45,37 +45,41 @@ func NewSlice(lhs, rhs interface{}) (*Slice, error) {
 				diffs = append(diffs, diff)
 
 				if err != nil {
-					return &Slice{
-						LHS:   lhs,
-						RHS:   rhs,
-						Diffs: diffs,
+					return slice{
+						lhs:   lhs,
+						rhs:   rhs,
+						diffs: diffs,
 					}, err
 				}
 				continue
 			}
 			if i >= rhsVal.Len() {
-				missing := &SliceMissing{lhsVal.Index(i).Interface()}
-				diffs = append(diffs, missing)
+				diffs = append(diffs, sliceMissing{lhsVal.Index(i).Interface()})
 				continue
 			}
-			excess := &SliceExcess{rhsVal.Index(i).Interface()}
-			diffs = append(diffs, excess)
+			diffs = append(diffs, sliceExcess{rhsVal.Index(i).Interface()})
 		}
 	}
 
-	return &Slice{
-		LHS:   lhs,
-		RHS:   rhs,
-		Diffs: diffs,
+	return slice{
+		lhs:   lhs,
+		rhs:   rhs,
+		diffs: diffs,
 	}, nil
+}
+
+func IsSlice(d Differ) bool {
+	_, ok := d.(slice)
+
+	return ok
 }
 
 func sliceTypesDiffer(lhs, rhs interface{}) (bool, error) {
 	if lhs == nil {
-		return true, InvalidType{Value: lhs, For: "slice"}
+		return true, ErrInvalidType{Value: lhs, For: "slice"}
 	}
 	if rhs == nil {
-		return true, InvalidType{Value: rhs, For: "slice"}
+		return true, ErrInvalidType{Value: rhs, For: "slice"}
 	}
 
 	lhsVal := reflect.ValueOf(lhs)
@@ -86,14 +90,14 @@ func sliceTypesDiffer(lhs, rhs interface{}) (bool, error) {
 	return lhsElType.Kind() != rhsElType.Kind(), nil
 }
 
-func (s Slice) Diff() Type {
-	if ok, err := sliceTypesDiffer(s.LHS, s.RHS); err != nil {
+func (s slice) Diff() Type {
+	if ok, err := sliceTypesDiffer(s.lhs, s.rhs); err != nil {
 		return Invalid
 	} else if ok {
 		return TypesDiffer
 	}
 
-	for _, d := range s.Diffs {
+	for _, d := range s.diffs {
 		if d.Diff() != Identical {
 			return ContentDiffer
 		}
@@ -102,19 +106,19 @@ func (s Slice) Diff() Type {
 	return Identical
 }
 
-func (s Slice) Strings() []string {
+func (s slice) Strings() []string {
 	switch s.Diff() {
 	case Identical:
-		return []string{fmt.Sprintf("  %T %v", s.LHS, s.LHS)}
+		return []string{fmt.Sprintf("  %T %v", s.lhs, s.lhs)}
 	case TypesDiffer:
 		return []string{
-			fmt.Sprintf("- %T %v", s.LHS, s.LHS),
-			fmt.Sprintf("+ %T %v", s.RHS, s.RHS),
+			fmt.Sprintf("- %T %v", s.lhs, s.lhs),
+			fmt.Sprintf("+ %T %v", s.rhs, s.rhs),
 		}
 	case ContentDiffer:
 		var ss = []string{"["}
 
-		for _, d := range s.Diffs {
+		for _, d := range s.diffs {
 			ss = append(ss, d.Strings()...)
 		}
 
@@ -124,17 +128,17 @@ func (s Slice) Strings() []string {
 	return []string{}
 }
 
-func (s Slice) StringIndent(key, prefix string, conf Output) string {
+func (s slice) StringIndent(key, prefix string, conf Output) string {
 	switch s.Diff() {
 	case Identical:
-		return " " + prefix + key + conf.White(s.LHS)
+		return " " + prefix + key + conf.white(s.lhs)
 	case TypesDiffer:
-		return "-" + prefix + key + conf.Red(s.LHS) + "\n" +
-			"+" + prefix + key + conf.Green(s.RHS)
+		return "-" + prefix + key + conf.red(s.lhs) + "\n" +
+			"+" + prefix + key + conf.green(s.rhs)
 	case ContentDiffer:
-		var ss = []string{" " + prefix + key + conf.Type(s.LHS) + "["}
+		var ss = []string{" " + prefix + key + conf.typ(s.lhs) + "["}
 
-		for _, d := range s.Diffs {
+		for _, d := range s.diffs {
 			s := d.StringIndent("", prefix+conf.Indent, conf)
 			if s != "" {
 				ss = append(ss, s)
@@ -147,46 +151,58 @@ func (s Slice) StringIndent(key, prefix string, conf Output) string {
 	return ""
 }
 
-func (s Slice) Walk(path string, fn WalkFn) error {
-	for i, diff := range s.Diffs {
+func (s slice) Walk(path string, fn WalkFn) error {
+	for i, diff := range s.diffs {
 		d, err := walk(s, diff, path+"[]", fn)
 		if err != nil {
 			return err
 		}
 		if d != nil {
-			s.Diffs[i] = d
+			s.diffs[i] = d
 		}
 	}
 
 	return nil
 }
 
-func (m SliceMissing) Diff() Type {
+func IsSliceMissing(d Differ) bool {
+	_, ok := d.(sliceMissing)
+
+	return ok
+}
+
+func (m sliceMissing) Diff() Type {
 	return ContentDiffer
 }
 
-func (m SliceMissing) Strings() []string {
+func (m sliceMissing) Strings() []string {
 	return []string{
-		fmt.Sprintf("- %T %v", m.Value, m.Value),
+		fmt.Sprintf("- %T %v", m.value, m.value),
 	}
 }
 
-func (m SliceMissing) StringIndent(key, prefix string, conf Output) string {
-	return "-" + prefix + key + conf.Red(m.Value) +
+func (m sliceMissing) StringIndent(key, prefix string, conf Output) string {
+	return "-" + prefix + key + conf.red(m.value) +
 		"\n+" + prefix + key
 }
 
-func (e SliceExcess) Diff() Type {
+func (e sliceExcess) Diff() Type {
 	return ContentDiffer
 }
 
-func (e SliceExcess) Strings() []string {
+func IsSliceExcess(d Differ) bool {
+	_, ok := d.(sliceExcess)
+
+	return ok
+}
+
+func (e sliceExcess) Strings() []string {
 	return []string{
-		fmt.Sprintf("+ %T %v", e.Value, e.Value),
+		fmt.Sprintf("+ %T %v", e.value, e.value),
 	}
 }
 
-func (e SliceExcess) StringIndent(key, prefix string, conf Output) string {
+func (e sliceExcess) StringIndent(key, prefix string, conf Output) string {
 	return "-" + prefix + key +
-		"\n+" + prefix + key + conf.Green(e.Value)
+		"\n+" + prefix + key + conf.green(e.value)
 }

@@ -24,25 +24,25 @@ func Diff(lhs, rhs interface{}) (Differ, error) {
 	rhsVal := reflect.ValueOf(rhs)
 
 	if lhs == nil && rhs == nil {
-		return &Scalar{lhs, rhs}, nil
+		return scalar{lhs, rhs}, nil
 	}
 	if lhs == nil || rhs == nil {
-		return &Types{lhs, rhs}, nil
+		return types{lhs, rhs}, nil
 	}
 	if lhsVal.Type().Comparable() && rhsVal.Type().Comparable() {
-		return &Scalar{lhs, rhs}, nil
+		return scalar{lhs, rhs}, nil
 	}
 	if lhsVal.Kind() != rhsVal.Kind() {
-		return &Types{lhs, rhs}, nil
+		return types{lhs, rhs}, nil
 	}
 	if lhsVal.Kind() == reflect.Slice {
-		return NewSlice(lhs, rhs)
+		return newSlice(lhs, rhs)
 	}
 	if lhsVal.Kind() == reflect.Map {
-		return NewMap(lhs, rhs)
+		return newMap(lhs, rhs)
 	}
 
-	return &Types{lhs, rhs}, &Unsupported{lhsVal.Type(), rhsVal.Type()}
+	return types{lhs, rhs}, &ErrUnsupported{lhsVal.Type(), rhsVal.Type()}
 }
 
 func (t Type) String() string {
@@ -56,4 +56,28 @@ func (t Type) String() string {
 	}
 
 	return "invalid type"
+}
+
+// IsExcess returns true if the provided Differ refers to a value missing in LHS
+func IsExcess(d Differ) bool {
+	switch d.(type) {
+	default:
+		return false
+	case mapExcess:
+		return true
+	case sliceExcess:
+		return true
+	}
+}
+
+// IsMissing returns true if the provided Differ refers to a value missing in LHS
+func IsMissing(d Differ) bool {
+	switch d.(type) {
+	default:
+		return false
+	case mapMissing:
+		return true
+	case sliceMissing:
+		return true
+	}
 }

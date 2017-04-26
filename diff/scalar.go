@@ -5,43 +5,49 @@ import (
 	"reflect"
 )
 
-type Scalar struct {
-	LHS interface{}
-	RHS interface{}
+type scalar struct {
+	lhs interface{}
+	rhs interface{}
 }
 
-func (s Scalar) Diff() Type {
-	lhsVal := reflect.ValueOf(s.LHS)
-	rhsVal := reflect.ValueOf(s.RHS)
+func IsScalar(d Differ) bool {
+	_, ok := d.(scalar)
+
+	return ok
+}
+
+func (s scalar) Diff() Type {
+	lhsVal := reflect.ValueOf(s.lhs)
+	rhsVal := reflect.ValueOf(s.rhs)
 
 	if lhsVal.Kind() != rhsVal.Kind() {
 		return TypesDiffer
 	}
-	if s.LHS != s.RHS {
+	if s.lhs != s.rhs {
 		return ContentDiffer
 	}
 
 	return Identical
 }
 
-func (s Scalar) Strings() []string {
+func (s scalar) Strings() []string {
 	if s.Diff() == Identical {
 		return []string{
-			fmt.Sprintf("  %T %v", s.LHS, s.LHS),
+			fmt.Sprintf("  %T %v", s.lhs, s.lhs),
 		}
 	}
 
 	return []string{
-		fmt.Sprintf("- %T %v", s.LHS, s.LHS),
-		fmt.Sprintf("+ %T %v", s.RHS, s.RHS),
+		fmt.Sprintf("- %T %v", s.lhs, s.lhs),
+		fmt.Sprintf("+ %T %v", s.rhs, s.rhs),
 	}
 }
 
-func (s Scalar) StringIndent(key, prefix string, conf Output) string {
+func (s scalar) StringIndent(key, prefix string, conf Output) string {
 	if s.Diff() == Identical {
-		return " " + prefix + key + conf.White(s.LHS)
+		return " " + prefix + key + conf.white(s.lhs)
 	}
 
-	return "-" + prefix + key + conf.Red(s.LHS) + "\n" +
-		"+" + prefix + key + conf.Green(s.RHS)
+	return "-" + prefix + key + conf.red(s.lhs) + "\n" +
+		"+" + prefix + key + conf.green(s.rhs)
 }
