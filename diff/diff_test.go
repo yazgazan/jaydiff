@@ -428,7 +428,7 @@ func TestReport(t *testing.T) {
 	}
 	ss, err := Report(d, testOutput)
 	if err != nil {
-		t.Errorf("Report(Diff(...), %+v): unexpected error: %s", err, testOutput)
+		t.Errorf("Report(Diff(...), %+v): unexpected error: %s", testOutput, err)
 		return
 	}
 

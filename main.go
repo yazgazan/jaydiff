@@ -10,10 +10,11 @@ import (
 )
 
 const (
-	StatusDiffMismatch   = 1
-	StatusReadError      = 3
-	StatusUnmarshalError = 4
-	StatusDiffError      = 5
+	statusDiffMismatch   = 1
+	statusUsage          = 2
+	statusReadError      = 3
+	statusUnmarshalError = 4
+	statusDiffError      = 5
 )
 
 func main() {
@@ -26,29 +27,33 @@ func main() {
 	d, err := diff.Diff(lhs, rhs)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: diff failed: %s", err)
-		os.Exit(StatusDiffError)
+		os.Exit(statusDiffError)
 	}
 
 	d, err = pruneIgnore(d, conf.Ignore)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: ignoring failed: %s", err)
+		os.Exit(statusDiffError)
+	}
 
 	if conf.OutputReport {
-		ss, err := diff.Report(d, diff.Output(conf.Output))
+		ss, err := diff.Report(d, diff.Output(conf.output))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: Failed to generate report: %s", err)
-			os.Exit(StatusDiffError)
+			os.Exit(statusDiffError)
 		}
 		for _, s := range ss {
 			fmt.Println(s)
 		}
 	} else {
-		fmt.Println(d.StringIndent("", "", diff.Output(conf.Output)))
+		fmt.Println(d.StringIndent("", "", diff.Output(conf.output)))
 	}
 	if d.Diff() != diff.Identical {
-		os.Exit(StatusDiffMismatch)
+		os.Exit(statusDiffMismatch)
 	}
 }
 
-func pruneIgnore(d diff.Differ, ignore Patterns) (diff.Differ, error) {
+func pruneIgnore(d diff.Differ, ignore ignorePatterns) (diff.Differ, error) {
 	return diff.Walk(d, func(parent diff.Differ, d diff.Differ, path string) (diff.Differ, error) {
 		if ignore.Match(path) {
 			return diff.Ignore()
@@ -64,12 +69,12 @@ func parseFile(fname string) interface{} {
 	b, err := ioutil.ReadFile(fname)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: cannot read %s\n", fname)
-		os.Exit(StatusReadError)
+		os.Exit(statusReadError)
 	}
 	err = json.Unmarshal(b, &val)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: cannot parse %s: %s\n", fname, err)
-		os.Exit(StatusUnmarshalError)
+		os.Exit(statusUnmarshalError)
 	}
 
 	return val

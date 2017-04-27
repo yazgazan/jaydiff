@@ -6,14 +6,14 @@ import (
 	"github.com/gobwas/glob"
 )
 
-type Pattern struct {
+type ignorePattern struct {
 	glob.Glob
 	s string
 }
 
-type Patterns []Pattern
+type ignorePatterns []ignorePattern
 
-func (p Patterns) String() string {
+func (p ignorePatterns) String() string {
 	var ss []string
 
 	for _, pattern := range p {
@@ -23,12 +23,12 @@ func (p Patterns) String() string {
 	return strings.Join(ss, ",")
 }
 
-func (p *Patterns) Set(s string) error {
+func (p *ignorePatterns) Set(s string) error {
 	pattern, err := glob.Compile(s)
 	if err != nil {
 		return err
 	}
-	*p = append(*p, Pattern{
+	*p = append(*p, ignorePattern{
 		s:    s,
 		Glob: pattern,
 	})
@@ -36,7 +36,7 @@ func (p *Patterns) Set(s string) error {
 	return nil
 }
 
-func (p Patterns) Match(s string) bool {
+func (p ignorePatterns) Match(s string) bool {
 	for _, pattern := range p {
 		if pattern.Match(s) {
 			return true

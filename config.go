@@ -9,16 +9,16 @@ import (
 )
 
 type config struct {
-	Output
-	Ignore       Patterns `long:"ignore" short:"i" description:"paths to ignore (glob)"`
-	OutputReport bool     `long:"report" short:"r" description:"output report format"`
-	Files        struct {
+	Files struct {
 		LHS string `positional-arg-name:"FILE_1"`
 		RHS string `positional-arg-name:"FILE_2"`
 	} `positional-args:"yes" required:"yes"`
+	Ignore ignorePatterns `long:"ignore" short:"i" description:"paths to ignore (glob)"`
+	output
+	OutputReport bool `long:"report" short:"r" description:"output report format"`
 }
 
-type Output struct {
+type output struct {
 	Indent    string `long:"indent" description:"indent string" default:"\t"`
 	ShowTypes bool   `long:"show-types" short:"t" description:"show types"`
 	Colorized bool
@@ -33,10 +33,10 @@ func readConfig() config {
 			os.Exit(0)
 		}
 		fmt.Fprintf(os.Stderr, "Failed to parse arguments. See %s --help\n", os.Args[0])
-		os.Exit(2)
+		os.Exit(statusUsage)
 	}
 
-	c.Output.Colorized = terminal.IsTerminal(int(os.Stdout.Fd()))
+	c.output.Colorized = terminal.IsTerminal(int(os.Stdout.Fd()))
 
 	return c
 }
