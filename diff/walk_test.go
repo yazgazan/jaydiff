@@ -51,7 +51,7 @@ func TestWalk(t *testing.T) {
 }
 
 func TestWalkError(t *testing.T) {
-	var expectedErr = errors.New("forbiden 42")
+	var expectedErr = errors.New("forbidden 42")
 	for _, test := range []struct {
 		LHS interface{}
 		RHS interface{}
