@@ -16,10 +16,10 @@ func TestWalk(t *testing.T) {
 		{map[int]int{1: 2}, map[int]int{1: 2}, 2},
 		{
 			LHS: map[string][]int{
-				"abc": []int{1, 2},
+				"abc": {1, 2},
 			},
 			RHS: map[string][]int{
-				"abc": []int{1, 4, 5},
+				"abc": {1, 4, 5},
 			},
 			Want: 5,
 		},
