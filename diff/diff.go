@@ -1,20 +1,26 @@
-// Generate deep, walkable diffs of maps and slices
+// Package diff provides utilities to generate deep, walkable diffs of maps and slices
 package diff
 
 import (
 	"reflect"
 )
 
+// Type is used to specify the nature of the difference
 type Type int
 
 const (
+	// TypesDiffer is used when two values cannot be compared due to types differences
+	// (for example: comparing a slice to an int)
 	TypesDiffer Type = iota
+	// ContentDiffer is used when the types matches but the content differs
 	ContentDiffer
+	// Identical is used when both the type and the content match.
 	Identical
+	// Invalid is used when calling Diff() on an inproperly constructed node
 	Invalid
 )
 
-// Differ is
+// Differ is implemented by all nodes in a diff-tree.
 type Differ interface {
 	Diff() Type
 	Strings() []string
@@ -78,7 +84,7 @@ func IsExcess(d Differ) bool {
 	}
 }
 
-// IsExcess can be used in a WalkFn to find values missing from the RHS
+// IsMissing can be used in a WalkFn to find values missing from the RHS
 func IsMissing(d Differ) bool {
 	switch d.(type) {
 	default:

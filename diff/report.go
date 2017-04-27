@@ -1,11 +1,5 @@
 package diff
 
-type reportError string
-
-func (e reportError) Error() string {
-	return string(e)
-}
-
 // Report generates a flat list of differences encountered in the diff tree.
 // Its output is less verbose than StringIndent as it doesn't report on
 // matching values.
