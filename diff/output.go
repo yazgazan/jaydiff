@@ -2,13 +2,15 @@ package diff
 
 import (
 	"fmt"
+
 	"github.com/fatih/color"
 )
 
+// Output is used to configure the output of the Strings and StringIndent functions.
 type Output struct {
 	Indent    string
-	Colorized bool
 	ShowTypes bool
+	Colorized bool
 }
 
 func (o Output) red(v interface{}) string {

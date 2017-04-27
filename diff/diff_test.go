@@ -239,7 +239,7 @@ func TestSlice(t *testing.T) {
 	}
 
 	invalid, err := newSlice(nil, nil)
-	if invalidErr, ok := err.(ErrInvalidType); ok {
+	if invalidErr, ok := err.(errInvalidType); ok {
 		if !strings.Contains(invalidErr.Error(), "nil") {
 			t.Errorf("NewSlice(nil, nil): unexpected format for InvalidType error: got %s", err)
 		}
@@ -257,7 +257,7 @@ func TestSlice(t *testing.T) {
 	}
 
 	invalid, err = newSlice([]int{}, nil)
-	if invalidErr, ok := err.(ErrInvalidType); ok {
+	if invalidErr, ok := err.(errInvalidType); ok {
 		if !strings.Contains(invalidErr.Error(), "nil") {
 			t.Errorf("NewSlice([]int{}, nil): unexpected format for InvalidType error: got %s", err)
 		}
@@ -354,7 +354,7 @@ func TestMap(t *testing.T) {
 	}
 
 	invalid, err := newMap(nil, nil)
-	if invalidErr, ok := err.(ErrInvalidType); ok {
+	if invalidErr, ok := err.(errInvalidType); ok {
 		if !strings.Contains(invalidErr.Error(), "nil") {
 			t.Errorf("NewMap(nil, nil): unexpected format for InvalidType error: got %s", err)
 		}
@@ -372,7 +372,7 @@ func TestMap(t *testing.T) {
 	}
 
 	invalid, err = newMap(map[int]int{}, nil)
-	if invalidErr, ok := err.(ErrInvalidType); ok {
+	if invalidErr, ok := err.(errInvalidType); ok {
 		if !strings.Contains(invalidErr.Error(), "nil") {
 			t.Errorf("NewMap(map[int]int{}, nil): unexpected format for InvalidType error: got %s", err)
 		}
@@ -426,20 +426,20 @@ func TestReport(t *testing.T) {
 		t.Errorf("Diff(...): unexpected error: %s", err)
 		return
 	}
-	errs, err := Report(d, testOutput)
+	ss, err := Report(d, testOutput)
 	if err != nil {
 		t.Errorf("Report(Diff(...), %+v): unexpected error: %s", err, testOutput)
 		return
 	}
 
-	if len(errs) != len(want) {
-		t.Errorf("len(Report(Diff(...), %+v)) = %d, expected %d", testOutput, len(errs), len(want))
+	if len(ss) != len(want) {
+		t.Errorf("len(Report(Diff(...), %+v)) = %d, expected %d", testOutput, len(ss), len(want))
 		return
 	}
 
-	for i, e := range errs {
-		if !strings.Contains(e.Error(), want[i]) {
-			t.Errorf("Report(Diff(...), %+v)[%d] = %q, should contain %q", testOutput, i, e.Error(), want[i])
+	for i, s := range ss {
+		if !strings.Contains(s, want[i]) {
+			t.Errorf("Report(Diff(...), %+v)[%d] = %q, should contain %q", testOutput, i, s, want[i])
 		}
 	}
 }

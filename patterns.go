@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/gobwas/glob"
 	"strings"
+
+	"github.com/gobwas/glob"
 )
 
 type Pattern struct {
@@ -10,9 +11,9 @@ type Pattern struct {
 	s string
 }
 
-type patterns []Pattern
+type Patterns []Pattern
 
-func (p patterns) String() string {
+func (p Patterns) String() string {
 	var ss []string
 
 	for _, pattern := range p {
@@ -22,7 +23,7 @@ func (p patterns) String() string {
 	return strings.Join(ss, ",")
 }
 
-func (p *patterns) Set(s string) error {
+func (p *Patterns) Set(s string) error {
 	pattern, err := glob.Compile(s)
 	if err != nil {
 		return err
@@ -35,7 +36,7 @@ func (p *patterns) Set(s string) error {
 	return nil
 }
 
-func (p patterns) Match(s string) bool {
+func (p Patterns) Match(s string) bool {
 	for _, pattern := range p {
 		if pattern.Match(s) {
 			return true

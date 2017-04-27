@@ -3,9 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/yazgazan/jaydiff/diff"
 	"io/ioutil"
 	"os"
+
+	"github.com/yazgazan/jaydiff/diff"
 )
 
 const (
@@ -19,8 +20,8 @@ func main() {
 	var err error
 	conf := readConfig()
 
-	lhs := parseFile(conf.lhsFile)
-	rhs := parseFile(conf.rhsFile)
+	lhs := parseFile(conf.Files.LHS)
+	rhs := parseFile(conf.Files.RHS)
 
 	d, err := diff.Diff(lhs, rhs)
 	if err != nil {
@@ -28,26 +29,26 @@ func main() {
 		os.Exit(StatusDiffError)
 	}
 
-	d, err = pruneIgnore(d, conf.ignore)
+	d, err = pruneIgnore(d, conf.Ignore)
 
-	if conf.outputReport {
-		errs, err := diff.Report(d, conf.Output)
+	if conf.OutputReport {
+		ss, err := diff.Report(d, diff.Output(conf.Output))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: Failed to generate report: %s", err)
 			os.Exit(StatusDiffError)
 		}
-		for _, e := range errs {
-			fmt.Println(e.Error())
+		for _, s := range ss {
+			fmt.Println(s)
 		}
 	} else {
-		fmt.Println(d.StringIndent("", "", conf.Output))
+		fmt.Println(d.StringIndent("", "", diff.Output(conf.Output)))
 	}
 	if d.Diff() != diff.Identical {
 		os.Exit(StatusDiffMismatch)
 	}
 }
 
-func pruneIgnore(d diff.Differ, ignore patterns) (diff.Differ, error) {
+func pruneIgnore(d diff.Differ, ignore Patterns) (diff.Differ, error) {
 	return diff.Walk(d, func(parent diff.Differ, d diff.Differ, path string) (diff.Differ, error) {
 		if ignore.Match(path) {
 			return diff.Ignore()

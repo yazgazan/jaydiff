@@ -70,10 +70,10 @@ func newSlice(lhs, rhs interface{}) (Differ, error) {
 
 func sliceTypesDiffer(lhs, rhs interface{}) (bool, error) {
 	if lhs == nil {
-		return true, ErrInvalidType{Value: lhs, For: "slice"}
+		return true, errInvalidType{Value: lhs, For: "slice"}
 	}
 	if rhs == nil {
-		return true, ErrInvalidType{Value: rhs, For: "slice"}
+		return true, errInvalidType{Value: rhs, For: "slice"}
 	}
 
 	lhsVal := reflect.ValueOf(lhs)
@@ -170,8 +170,7 @@ func (m sliceMissing) Strings() []string {
 }
 
 func (m sliceMissing) StringIndent(key, prefix string, conf Output) string {
-	return "-" + prefix + key + conf.red(m.value) +
-		"\n+" + prefix + key
+	return "-" + prefix + key + conf.red(m.value)
 }
 
 func (e sliceExcess) Diff() Type {
@@ -185,6 +184,5 @@ func (e sliceExcess) Strings() []string {
 }
 
 func (e sliceExcess) StringIndent(key, prefix string, conf Output) string {
-	return "-" + prefix + key +
-		"\n+" + prefix + key + conf.green(e.value)
+	return "+" + prefix + key + conf.green(e.value)
 }

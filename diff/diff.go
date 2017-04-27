@@ -1,3 +1,4 @@
+// Generate deep, walkable diffs of maps and slices
 package diff
 
 import (
@@ -13,12 +14,19 @@ const (
 	Invalid
 )
 
+// Differ is
 type Differ interface {
 	Diff() Type
 	Strings() []string
 	StringIndent(key, prefix string, conf Output) string
 }
 
+// Diff generates a tree representing differences and similarities between two objects.
+//
+// Diff supports maps, slices and scalars (comparables types such as int, string, etc ...).
+// When an unsupported type is encountered, an ErrUnsupported error is returned.
+//
+// BUG(yazgazan): An infinite recursion is possible if the lhs and/or rhs objects are cyclic
 func Diff(lhs, rhs interface{}) (Differ, error) {
 	lhsVal := reflect.ValueOf(lhs)
 	rhsVal := reflect.ValueOf(rhs)
@@ -58,7 +66,7 @@ func (t Type) String() string {
 	return "invalid type"
 }
 
-// IsExcess returns true if the provided Differ refers to a value missing in LHS
+// IsExcess can be used in a WalkFn to find values missing from the LHS
 func IsExcess(d Differ) bool {
 	switch d.(type) {
 	default:
@@ -70,7 +78,7 @@ func IsExcess(d Differ) bool {
 	}
 }
 
-// IsMissing returns true if the provided Differ refers to a value missing in LHS
+// IsExcess can be used in a WalkFn to find values missing from the RHS
 func IsMissing(d Differ) bool {
 	switch d.(type) {
 	default:

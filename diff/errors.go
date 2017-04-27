@@ -5,6 +5,7 @@ import (
 	"reflect"
 )
 
+// ErrUnsupported is returned when an unsupported type is encountered (func, struct ...).
 type ErrUnsupported struct {
 	LHS reflect.Type
 	RHS reflect.Type
@@ -14,11 +15,11 @@ func (e ErrUnsupported) Error() string {
 	return "unsupported types: " + e.LHS.String() + ", " + e.RHS.String()
 }
 
-type ErrInvalidType struct {
+type errInvalidType struct {
 	Value interface{}
 	For   string
 }
 
-func (e ErrInvalidType) Error() string {
+func (e errInvalidType) Error() string {
 	return fmt.Sprintf("%T is not a valid type for %s", e.Value, e.For)
 }
