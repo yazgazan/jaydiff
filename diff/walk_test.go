@@ -79,3 +79,69 @@ func TestWalkError(t *testing.T) {
 		}
 	}
 }
+
+func TestIsExcess(t *testing.T) {
+	for _, test := range []struct {
+		LHS interface{}
+		RHS interface{}
+	}{
+		{[]int{1, 2}, []int{1, 2, 3}},
+		{map[int]int{1: 2, 3: 4}, map[int]int{1: 2, 3: 4, 5: 6}},
+	} {
+		d, err := Diff(test.LHS, test.RHS)
+		if err != nil {
+			t.Errorf("Diff(%+v, %+v): unexpected error: %s", test.LHS, test.RHS, err)
+			continue
+		}
+		if d.Diff() != ContentDiffer {
+			t.Errorf("Diff(%+v, %+v).Diff() = %s, expected %s", test.LHS, test.RHS, d.Diff(), ContentDiffer)
+		}
+
+		d, err = Walk(d, func(_, diff Differ, _ string) (Differ, error) {
+			if IsExcess(diff) {
+				return Ignore()
+			}
+			return nil, nil
+		})
+		if err != nil {
+			t.Errorf("Walk(...): unexpected error: %s", err)
+			continue
+		}
+		if d.Diff() != Identical {
+			t.Errorf("Walk(...)).Diff() = %s, expected %s", d.Diff(), Identical)
+		}
+	}
+}
+
+func TestIsMissing(t *testing.T) {
+	for _, test := range []struct {
+		LHS interface{}
+		RHS interface{}
+	}{
+		{[]int{1, 2, 3}, []int{1, 2}},
+		{map[int]int{1: 2, 3: 4, 5: 6}, map[int]int{1: 2, 3: 4}},
+	} {
+		d, err := Diff(test.LHS, test.RHS)
+		if err != nil {
+			t.Errorf("Diff(%+v, %+v): unexpected error: %s", test.LHS, test.RHS, err)
+			continue
+		}
+		if d.Diff() != ContentDiffer {
+			t.Errorf("Diff(%+v, %+v).Diff() = %s, expected %s", test.LHS, test.RHS, d.Diff(), ContentDiffer)
+		}
+
+		d, err = Walk(d, func(_, diff Differ, _ string) (Differ, error) {
+			if IsMissing(diff) {
+				return Ignore()
+			}
+			return nil, nil
+		})
+		if err != nil {
+			t.Errorf("Walk(...): unexpected error: %s", err)
+			continue
+		}
+		if d.Diff() != Identical {
+			t.Errorf("Walk(...)).Diff() = %s, expected %s", d.Diff(), Identical)
+		}
+	}
+}
