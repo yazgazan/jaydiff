@@ -23,7 +23,7 @@ func (p ignorePatterns) String() string {
 	return strings.Join(ss, ",")
 }
 
-func (p *ignorePatterns) Set(s string) error {
+func (p *ignorePatterns) UnmarshalFlag(s string) error {
 	pattern, err := glob.Compile(s)
 	if err != nil {
 		return err
