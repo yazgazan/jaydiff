@@ -10,11 +10,11 @@ import (
 )
 
 const (
-	statusDiffMismatch   = 1
 	statusUsage          = 2
 	statusReadError      = 3
 	statusUnmarshalError = 4
 	statusDiffError      = 5
+	statusDiffMismatch   = 6
 )
 
 func main() {

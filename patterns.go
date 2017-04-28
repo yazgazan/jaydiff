@@ -1,8 +1,6 @@
 package main
 
 import (
-	"strings"
-
 	"github.com/gobwas/glob"
 )
 
@@ -12,16 +10,6 @@ type ignorePattern struct {
 }
 
 type ignorePatterns []ignorePattern
-
-func (p ignorePatterns) String() string {
-	var ss []string
-
-	for _, pattern := range p {
-		ss = append(ss, pattern.s)
-	}
-
-	return strings.Join(ss, ",")
-}
 
 func (p *ignorePatterns) UnmarshalFlag(s string) error {
 	pattern, err := glob.Compile(s)
