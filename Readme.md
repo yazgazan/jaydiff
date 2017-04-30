@@ -101,4 +101,4 @@ $ jaydiff --report --show-types old.json new.json
 - Handle cyclic maps/structures properly
 - JayPatch
 - Have the diff lib support more types (Structs, interfaces (?), Arrays, ...)
-
+- JSON-ish output (instead of go-ish)
