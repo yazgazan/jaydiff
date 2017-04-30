@@ -39,7 +39,7 @@ Help Options:
 
 Getting a full diff of two json files:
 
-```sh
+```diff
 $ jaydiff --show-types old.json new.json
 
  map[string]interface {} map[
@@ -63,7 +63,7 @@ $ jaydiff --show-types old.json new.json
 
 Ignoring fields:
 
-```sh
+```diff
 $ jaydiff --show-types \
 	  --ignore='.b\[\]' --ignore='.d' --ignore='.c.[ac]' \
 	    old.json new.json
@@ -83,7 +83,7 @@ $ jaydiff --show-types \
 
 Report format:
 
-```sh
+```diff
 $ jaydiff --report --show-types old.json new.json
 
 - .b[]: float64 3
