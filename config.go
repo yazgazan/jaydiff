@@ -8,11 +8,13 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
+type Files struct {
+	LHS string `positional-arg-name:"FILE_1"`
+	RHS string `positional-arg-name:"FILE_2"`
+}
+
 type config struct {
-	Files struct {
-		LHS string `positional-arg-name:"FILE_1"`
-		RHS string `positional-arg-name:"FILE_2"`
-	} `positional-args:"yes" required:"yes"`
+	Files  Files          `positional-args:"yes" required:"yes"`
 	Ignore ignorePatterns `long:"ignore" short:"i" description:"paths to ignore (glob)"`
 	output
 	OutputReport bool `long:"report" short:"r" description:"output report format"`
