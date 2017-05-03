@@ -116,7 +116,6 @@ $ jaydiff --report --show-types --ignore-excess old.json new.json
 
 # Ideas
 
-- Handle circular references properly
 - JayPatch
 - Have the diff lib support more types (Structs, interfaces (?), Arrays, ...)
 - JSON-ish output (instead of go-ish)

@@ -1,6 +1,7 @@
 package diff
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 )
@@ -23,3 +24,6 @@ type errInvalidType struct {
 func (e errInvalidType) Error() string {
 	return fmt.Sprintf("%T is not a valid type for %s", e.Value, e.For)
 }
+
+// ErrCyclic is returned when one of the compared values contain circular references
+var ErrCyclic = errors.New("circular references not supported")
