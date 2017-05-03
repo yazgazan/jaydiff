@@ -46,6 +46,7 @@ $ jaydiff --show-types old.json new.json
          float64 1
 -        float64 3
 +        float64 5
++        float64 4
      ]
      c: map[string]interface {} map[
 -        a: string toto
@@ -56,6 +57,7 @@ $ jaydiff --show-types old.json new.json
 -    e: []interface {} []
 -    f: float64 42
      g: []interface {} [1 2 3]
++    h: float64 42
  ]
 ```
 
@@ -76,6 +78,7 @@ $ jaydiff --show-types \
 -    e: []interface {} []
 -    f: float64 42
      g: []interface {} [1 2 3]
++    h: float64 42
  ]
 ```
 
@@ -83,6 +86,23 @@ Report format:
 
 ```diff
 $ jaydiff --report --show-types old.json new.json
+
+- .b[]: float64 3
++ .b[]: float64 5
++ .b[]: float64 4
+- .c.a: string toto
++ .c.a: string titi
+- .c.b: float64 23
++ .c.b: string 23
+- .e: []interface {} []
+- .f: float64 42
++ .h: float64 42
+```
+
+Ignore Excess values (useful when checking for backward compatibility):
+
+```diff
+$ jaydiff --report --show-types --ignore-excess old.json new.json
 
 - .b[]: float64 3
 + .b[]: float64 5

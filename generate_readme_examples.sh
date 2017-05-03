@@ -3,7 +3,7 @@
 cat << EOF
 Getting a full diff of two json files:
 
-$(echo '```sh')
+$(echo '```diff')
 $ jaydiff --show-types old.json new.json
 
 $(./jaydiff --indent='    ' --show-types test_files/lhs.json test_files/rhs.json)
@@ -11,7 +11,7 @@ $(echo '```')
 
 Ignoring fields:
 
-$(echo '```sh')
+$(echo '```diff')
 $ jaydiff --show-types \\
 	  --ignore='.b\[\]' --ignore='.d' --ignore='.c.[ac]' \\
 	    old.json new.json
@@ -24,9 +24,18 @@ $(echo '```')
 
 Report format:
 
-$(echo '```sh')
+$(echo '```diff')
 $ jaydiff --report --show-types old.json new.json
 
 $(./jaydiff --report --indent='    ' --show-types test_files/lhs.json test_files/rhs.json)
 $(echo '```')
+
+Ignore Excess values (useful when checking for backward compatibility):
+
+$(echo '```diff')
+$ jaydiff --report --show-types --ignore-excess old.json new.json
+
+$(./jaydiff --report --ignore-excess --indent='    ' --show-types test_files/lhs.json test_files/rhs.json)
+$(echo '```')
+
 EOF
