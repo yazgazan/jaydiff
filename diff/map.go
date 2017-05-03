@@ -21,7 +21,7 @@ type mapExcess struct {
 	value interface{}
 }
 
-func newMap(lhs, rhs interface{}, visited *visited) (Differ, error) {
+func newMap(lhs, rhs interface{}, visited *visited) (Stringer, error) {
 	var diffs = make(map[interface{}]Differ)
 
 	lhsVal := reflect.ValueOf(lhs)
@@ -133,7 +133,7 @@ func (m mapDiff) Strings() []string {
 
 		for _, key := range keys {
 			d := m.diffs[key]
-			for _, s := range d.Strings() {
+			for _, s := range getStrings(d) {
 				ss = append(ss, fmt.Sprintf("%v: %s", key, s))
 			}
 		}
@@ -167,7 +167,7 @@ func (m mapDiff) StringIndent(keyprefix, prefix string, conf Output) string {
 			d := m.diffs[key]
 
 			keyStr := fmt.Sprintf("%v: ", key)
-			s := d.StringIndent(keyStr, prefix+conf.Indent, conf)
+			s := stringIndent(d, keyStr, prefix+conf.Indent, conf)
 			if s != "" {
 				ss = append(ss, s)
 			}

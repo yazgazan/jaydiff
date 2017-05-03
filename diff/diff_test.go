@@ -2,6 +2,7 @@ package diff
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -125,7 +126,7 @@ func TestTypes(t *testing.T) {
 		}
 
 		ss := typ.Strings()
-		indented := typ.StringIndent(testKey, testPrefix, testOutput)
+		indented := stringIndent(typ, testKey, testPrefix, testOutput)
 		testStrings("TestTypes", t, test, ss, indented)
 	}
 }
@@ -166,7 +167,7 @@ func TestScalar(t *testing.T) {
 		}
 
 		ss := typ.Strings()
-		indented := typ.StringIndent(testKey, testPrefix, testOutput)
+		indented := stringIndent(typ, testKey, testPrefix, testOutput)
 		testStrings("TestScalar", t, test, ss, indented)
 	}
 }
@@ -233,8 +234,8 @@ func TestSlice(t *testing.T) {
 			t.Errorf("Types.Diff() = %q, expected %q", typ.Diff(), test.Type)
 		}
 
-		ss := typ.Strings()
-		indented := typ.StringIndent(testKey, testPrefix, testOutput)
+		ss := getStrings(typ)
+		indented := stringIndent(typ, testKey, testPrefix, testOutput)
 		testStrings("TestSlice", t, test, ss, indented)
 	}
 
@@ -246,14 +247,14 @@ func TestSlice(t *testing.T) {
 	} else {
 		t.Errorf("NewSlice(nil, nil): expected InvalidType error, got %s", err)
 	}
-	ss := invalid.Strings()
+	ss := getStrings(invalid)
 	if len(ss) != 0 {
 		t.Errorf("len(invalidSlice.Strings()) = %d, expected 0", len(ss))
 	}
 
-	indented := invalid.StringIndent(testKey, testPrefix, testOutput)
+	indented := stringIndent(invalid, testKey, testPrefix, testOutput)
 	if indented != "" {
-		t.Errorf("invalidSlice.StringIndent(%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
+		t.Errorf("stringIndent(invalidSlice,%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
 	}
 
 	invalid, err = newSlice([]int{}, nil, &visited{})
@@ -264,14 +265,14 @@ func TestSlice(t *testing.T) {
 	} else {
 		t.Errorf("NewSlice([]int{}, nil): expected InvalidType error, got %s", err)
 	}
-	ss = invalid.Strings()
+	ss = getStrings(invalid)
 	if len(ss) != 0 {
 		t.Errorf("len(invalidSlice.Strings()) = %d, expected 0", len(ss))
 	}
 
-	indented = invalid.StringIndent(testKey, testPrefix, testOutput)
+	indented = stringIndent(invalid, testKey, testPrefix, testOutput)
 	if indented != "" {
-		t.Errorf("invalidSlice.StringIndent(%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
+		t.Errorf("stringIndent(invalidSlice,%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
 	}
 }
 
@@ -348,8 +349,8 @@ func TestMap(t *testing.T) {
 			t.Errorf("Types.Diff() = %q, expected %q", m.Diff(), test.Type)
 		}
 
-		ss := m.Strings()
-		indented := m.StringIndent(testKey, testPrefix, testOutput)
+		ss := getStrings(m)
+		indented := stringIndent(m, testKey, testPrefix, testOutput)
 		testStrings(fmt.Sprintf("TestMap[%d]", i), t, test, ss, indented)
 	}
 
@@ -361,14 +362,14 @@ func TestMap(t *testing.T) {
 	} else {
 		t.Errorf("NewMap(nil, nil): expected InvalidType error, got %s", err)
 	}
-	ss := invalid.Strings()
+	ss := getStrings(invalid)
 	if len(ss) != 0 {
 		t.Errorf("len(invalidMap.Strings()) = %d, expected 0", len(ss))
 	}
 
-	indented := invalid.StringIndent(testKey, testPrefix, testOutput)
+	indented := stringIndent(invalid, testKey, testPrefix, testOutput)
 	if indented != "" {
-		t.Errorf("invalidMap.StringIndent(%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
+		t.Errorf("stringIndent(invalidMap,%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
 	}
 
 	invalid, err = newMap(map[int]int{}, nil, &visited{})
@@ -379,14 +380,14 @@ func TestMap(t *testing.T) {
 	} else {
 		t.Errorf("NewMap(map[int]int{}, nil): expected InvalidType error, got %s", err)
 	}
-	ss = invalid.Strings()
+	ss = getStrings(invalid)
 	if len(ss) != 0 {
 		t.Errorf("len(invalidMap.Strings()) = %d, expected 0", len(ss))
 	}
 
-	indented = invalid.StringIndent(testKey, testPrefix, testOutput)
+	indented = stringIndent(invalid, testKey, testPrefix, testOutput)
 	if indented != "" {
-		t.Errorf("invalidMap.StringIndent(%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
+		t.Errorf("stringIndent(invalidMap,%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
 	}
 }
 
@@ -437,11 +438,11 @@ func TestIgnore(t *testing.T) {
 	if ignoreDiff.Diff() != Identical {
 		t.Errorf("NewIgnore().Diff() = %q, expected %q", ignoreDiff.Diff(), Identical)
 	}
-	if len(ignoreDiff.Strings()) != 0 {
-		t.Errorf("len(NewIgnore().Strings()) = %d, expected 0", len(ignoreDiff.Strings()))
+	if len(getStrings(ignoreDiff)) != 0 {
+		t.Errorf("len(NewIgnore().Strings()) = %d, expected 0", len(getStrings(ignoreDiff)))
 	}
-	if indented := ignoreDiff.StringIndent(testKey, testPrefix, testOutput); indented != "" {
-		t.Errorf("NewIgnore().StringIndent(...) = %q, expected %q", indented, "")
+	if indented := stringIndent(ignoreDiff, testKey, testPrefix, testOutput); indented != "" {
+		t.Errorf("stringIndent(NewIgnore(),...) = %q, expected %q", indented, "")
 	}
 }
 
@@ -485,6 +486,58 @@ func TestReport(t *testing.T) {
 	}
 }
 
+type testDiffStringer string
+
+func (s testDiffStringer) Diff() Type {
+	return Identical
+}
+
+func (s testDiffStringer) Strings() []string {
+	return []string{string(s)}
+}
+
+func (s testDiffStringer) StringIndent(key, prefix string, conf Output) string {
+	return prefix + key + string(s)
+}
+
+type testStringer string
+
+func (s testStringer) String() string {
+	return string(s)
+}
+
+func TestGetStrings(t *testing.T) {
+	for _, test := range []struct {
+		input interface{}
+		want  interface{}
+	}{
+		{input: testDiffStringer("foo"), want: []string{"foo"}},
+		{input: testStringer("bar"), want: []string{"bar"}},
+		{input: "fiz", want: []string{"fiz"}},
+	} {
+		ss := getStrings(test.input)
+		if !reflect.DeepEqual(ss, test.want) {
+			t.Errorf("getStrings(%+v) = %v, expected %v", test.input, ss, test.want)
+		}
+	}
+}
+
+func TestStringIndent(t *testing.T) {
+	for _, test := range []struct {
+		input interface{}
+		want  string
+	}{
+		{input: testDiffStringer("foo"), want: "{prefix}{key}foo"},
+		{input: testStringer("bar"), want: " {prefix}{key}bar"},
+		{input: "fiz", want: " {prefix}{key}fiz"},
+	} {
+		s := stringIndent(test.input, "{key}", "{prefix}", Output{})
+		if s != test.want {
+			t.Errorf("stringIndent(%+v, '{key}', '{prefix}') = %q, expected %q", test.input, s, test.want)
+		}
+	}
+}
+
 func testStrings(context string, t *testing.T, test stringTest, ss []string, indented string) {
 	for i, want := range test.Want {
 		s := ss[i]
@@ -495,7 +548,7 @@ func testStrings(context string, t *testing.T, test stringTest, ss []string, ind
 			}
 			if !strings.Contains(indented, needle) {
 				t.Errorf(
-					"%s: typ.StringIndent(%q, %q, %+v) = %q, expected it to contain %q",
+					"%s: stringIndent(typ,%q, %q, %+v) = %q, expected it to contain %q",
 					context, testKey, testPrefix, testOutput, indented, needle,
 				)
 			}
