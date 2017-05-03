@@ -11,12 +11,12 @@ func Report(d Differ, outConf Output) ([]string, error) {
 		case Identical:
 			return nil, nil
 		case TypesDiffer:
-			errs = append(errs, diff.StringIndent(" "+path+": ", "", outConf))
+			errs = append(errs, stringIndent(diff, " "+path+": ", "", outConf))
 		case ContentDiffer:
 			if _, ok := diff.(Walker); ok {
 				return nil, nil
 			}
-			errs = append(errs, diff.StringIndent(" "+path+": ", "", outConf))
+			errs = append(errs, stringIndent(diff, " "+path+": ", "", outConf))
 		}
 
 		return nil, nil

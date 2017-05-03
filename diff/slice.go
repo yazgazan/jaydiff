@@ -20,7 +20,7 @@ type sliceExcess struct {
 	value interface{}
 }
 
-func newSlice(lhs, rhs interface{}, visited *visited) (Differ, error) {
+func newSlice(lhs, rhs interface{}, visited *visited) (Stringer, error) {
 	var diffs []Differ
 
 	lhsVal := reflect.ValueOf(lhs)
@@ -113,7 +113,7 @@ func (s slice) Strings() []string {
 		var ss = []string{"["}
 
 		for _, d := range s.diffs {
-			ss = append(ss, d.Strings()...)
+			ss = append(ss, getStrings(d)...)
 		}
 
 		return append(ss, "]")
@@ -133,7 +133,7 @@ func (s slice) StringIndent(key, prefix string, conf Output) string {
 		var ss = []string{" " + prefix + key + conf.typ(s.lhs) + "["}
 
 		for _, d := range s.diffs {
-			s := d.StringIndent("", prefix+conf.Indent, conf)
+			s := stringIndent(d, "", prefix+conf.Indent, conf)
 			if s != "" {
 				ss = append(ss, s)
 			}

@@ -2,6 +2,7 @@
 package diff
 
 import (
+	"fmt"
 	"reflect"
 )
 
@@ -23,8 +24,35 @@ const (
 // Differ is implemented by all nodes in a diff-tree.
 type Differ interface {
 	Diff() Type
+}
+
+// Stringer is a pretty-print capable Differ
+type Stringer interface {
+	Differ
 	Strings() []string
 	StringIndent(key, prefix string, conf Output) string
+}
+
+func getStrings(d interface{}) []string {
+	switch t := d.(type) {
+	case Stringer:
+		return t.Strings()
+	case fmt.Stringer:
+		return []string{t.String()}
+	}
+
+	return []string{fmt.Sprintf("%+v", d)}
+}
+
+func stringIndent(d interface{}, key, prefix string, conf Output) string {
+	switch t := d.(type) {
+	case Stringer:
+		return t.StringIndent(key, prefix, conf)
+	case fmt.Stringer:
+		return " " + prefix + key + conf.white(t.String())
+	}
+
+	return " " + prefix + key + conf.white(fmt.Sprintf("%+v", d))
 }
 
 // Diff generates a tree representing differences and similarities between two objects.
@@ -33,11 +61,11 @@ type Differ interface {
 // When an unsupported type is encountered, an ErrUnsupported error is returned.
 //
 // BUG(yazgazan): An infinite recursion is possible if the lhs and/or rhs objects are cyclic
-func Diff(lhs, rhs interface{}) (Differ, error) {
+func Diff(lhs, rhs interface{}) (Stringer, error) {
 	return diff(lhs, rhs, &visited{})
 }
 
-func diff(lhs, rhs interface{}, visited *visited) (Differ, error) {
+func diff(lhs, rhs interface{}, visited *visited) (Stringer, error) {
 	lhsVal := reflect.ValueOf(lhs)
 	rhsVal := reflect.ValueOf(rhs)
 
@@ -64,7 +92,7 @@ func diff(lhs, rhs interface{}, visited *visited) (Differ, error) {
 	return types{lhs, rhs}, &ErrUnsupported{lhsVal.Type(), rhsVal.Type()}
 }
 
-func nilCheck(lhs, rhs interface{}) (Differ, bool) {
+func nilCheck(lhs, rhs interface{}) (Stringer, bool) {
 	if lhs == nil && rhs == nil {
 		return scalar{lhs, rhs}, true
 	}

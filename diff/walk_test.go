@@ -2,6 +2,7 @@ package diff
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 )
 
@@ -88,6 +89,8 @@ func TestIsExcess(t *testing.T) {
 		{[]int{1, 2}, []int{1, 2, 3}},
 		{map[int]int{1: 2, 3: 4}, map[int]int{1: 2, 3: 4, 5: 6}},
 	} {
+		var d Differ
+
 		d, err := Diff(test.LHS, test.RHS)
 		if err != nil {
 			t.Errorf("Diff(%+v, %+v): unexpected error: %s", test.LHS, test.RHS, err)
@@ -121,6 +124,8 @@ func TestIsMissing(t *testing.T) {
 		{[]int{1, 2, 3}, []int{1, 2}},
 		{map[int]int{1: 2, 3: 4, 5: 6}, map[int]int{1: 2, 3: 4}},
 	} {
+		var d Differ
+
 		d, err := Diff(test.LHS, test.RHS)
 		if err != nil {
 			t.Errorf("Diff(%+v, %+v): unexpected error: %s", test.LHS, test.RHS, err)
@@ -143,5 +148,45 @@ func TestIsMissing(t *testing.T) {
 		if d.Diff() != Identical {
 			t.Errorf("Walk(...)).Diff() = %s, expected %s", d.Diff(), Identical)
 		}
+	}
+}
+
+func TestWalkNill(t *testing.T) {
+	var err error
+
+	_, err = Walk(nil, func(_, _ Differ, _ string) (Differ, error) {
+		return nil, nil
+	})
+	if err != nil {
+		t.Errorf("Walk(nil, func): Unexpected error: %s", err)
+	}
+
+	_, err = Walk(nil, nil)
+	if err == nil {
+		t.Error("Walk(nil, nil): expected error, got nil")
+	}
+}
+
+type customDiffer struct{}
+
+func (d customDiffer) Diff() Type {
+	return ContentDiffer
+}
+
+func TestWalkCustomDiffer(t *testing.T) {
+	d, _ := Diff(2, 4)
+
+	d, _ = Walk(d, func(_, _ Differ, _ string) (Differ, error) {
+		return customDiffer{}, nil
+	})
+
+	s := d.StringIndent("", "", Output{})
+	if s != placeholderNotImplemented {
+		t.Errorf("placeholderStringer.StringIndent() = %q, expected %q", s, placeholderNotImplemented)
+	}
+
+	ss := d.Strings()
+	if !reflect.DeepEqual(ss, []string{placeholderNotImplemented}) {
+		t.Errorf("placeholderStringer.Strings() = %v, expected [%q]", ss, placeholderNotImplemented)
 	}
 }
