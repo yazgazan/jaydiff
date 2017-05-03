@@ -41,11 +41,8 @@ func diff(lhs, rhs interface{}, visited *visited) (Differ, error) {
 	lhsVal := reflect.ValueOf(lhs)
 	rhsVal := reflect.ValueOf(rhs)
 
-	if lhs == nil && rhs == nil {
-		return scalar{lhs, rhs}, nil
-	}
-	if lhs == nil || rhs == nil {
-		return types{lhs, rhs}, nil
+	if d, ok := nilCheck(lhs, rhs); ok {
+		return d, nil
 	}
 	if err := visited.add(lhsVal, rhsVal); err != nil {
 		return types{lhs, rhs}, ErrCyclic
@@ -56,6 +53,7 @@ func diff(lhs, rhs interface{}, visited *visited) (Differ, error) {
 	if lhsVal.Kind() != rhsVal.Kind() {
 		return types{lhs, rhs}, nil
 	}
+
 	if lhsVal.Kind() == reflect.Slice {
 		return newSlice(lhs, rhs, visited)
 	}
@@ -64,6 +62,17 @@ func diff(lhs, rhs interface{}, visited *visited) (Differ, error) {
 	}
 
 	return types{lhs, rhs}, &ErrUnsupported{lhsVal.Type(), rhsVal.Type()}
+}
+
+func nilCheck(lhs, rhs interface{}) (Differ, bool) {
+	if lhs == nil && rhs == nil {
+		return scalar{lhs, rhs}, true
+	}
+	if lhs == nil || rhs == nil {
+		return types{lhs, rhs}, true
+	}
+
+	return nil, false
 }
 
 func (t Type) String() string {
