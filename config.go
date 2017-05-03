@@ -17,6 +17,7 @@ type config struct {
 	Files  files          `positional-args:"yes" required:"yes"`
 	Ignore ignorePatterns `long:"ignore" short:"i" description:"paths to ignore (glob)"`
 	output
+	IgnoreExcess bool `long:"ignore-excess" description:"ignore excess keys and arrey elements"`
 	OutputReport bool `long:"report" short:"r" description:"output report format"`
 }
 

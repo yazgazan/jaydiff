@@ -30,7 +30,7 @@ func main() {
 		os.Exit(statusDiffError)
 	}
 
-	d, err = pruneIgnore(d, conf.Ignore)
+	d, err = pruneIgnore(d, conf.IgnoreExcess, conf.Ignore)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: ignoring failed: %s", err)
 		os.Exit(statusDiffError)
@@ -53,11 +53,16 @@ func main() {
 	}
 }
 
-func pruneIgnore(d diff.Differ, ignore ignorePatterns) (diff.Differ, error) {
+func pruneIgnore(d diff.Differ, ingoreExcess bool, ignore ignorePatterns) (diff.Differ, error) {
 	return diff.Walk(d, func(parent diff.Differ, d diff.Differ, path string) (diff.Differ, error) {
 		if ignore.Match(path) {
 			return diff.Ignore()
 		}
+
+		if ingoreExcess && diff.IsExcess(d) {
+			return diff.Ignore()
+		}
+
 		return nil, nil
 	})
 }
