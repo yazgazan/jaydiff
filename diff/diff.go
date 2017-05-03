@@ -34,14 +34,18 @@ type Differ interface {
 //
 // BUG(yazgazan): An infinite recursion is possible if the lhs and/or rhs objects are cyclic
 func Diff(lhs, rhs interface{}) (Differ, error) {
+	return diff(lhs, rhs, &visited{})
+}
+
+func diff(lhs, rhs interface{}, visited *visited) (Differ, error) {
 	lhsVal := reflect.ValueOf(lhs)
 	rhsVal := reflect.ValueOf(rhs)
 
-	if lhs == nil && rhs == nil {
-		return scalar{lhs, rhs}, nil
+	if d, ok := nilCheck(lhs, rhs); ok {
+		return d, nil
 	}
-	if lhs == nil || rhs == nil {
-		return types{lhs, rhs}, nil
+	if err := visited.add(lhsVal, rhsVal); err != nil {
+		return types{lhs, rhs}, ErrCyclic
 	}
 	if lhsVal.Type().Comparable() && rhsVal.Type().Comparable() {
 		return scalar{lhs, rhs}, nil
@@ -49,14 +53,26 @@ func Diff(lhs, rhs interface{}) (Differ, error) {
 	if lhsVal.Kind() != rhsVal.Kind() {
 		return types{lhs, rhs}, nil
 	}
+
 	if lhsVal.Kind() == reflect.Slice {
-		return newSlice(lhs, rhs)
+		return newSlice(lhs, rhs, visited)
 	}
 	if lhsVal.Kind() == reflect.Map {
-		return newMap(lhs, rhs)
+		return newMap(lhs, rhs, visited)
 	}
 
 	return types{lhs, rhs}, &ErrUnsupported{lhsVal.Type(), rhsVal.Type()}
+}
+
+func nilCheck(lhs, rhs interface{}) (Differ, bool) {
+	if lhs == nil && rhs == nil {
+		return scalar{lhs, rhs}, true
+	}
+	if lhs == nil || rhs == nil {
+		return types{lhs, rhs}, true
+	}
+
+	return nil, false
 }
 
 func (t Type) String() string {
@@ -94,4 +110,47 @@ func IsMissing(d Differ) bool {
 	case sliceMissing:
 		return true
 	}
+}
+
+type visited struct {
+	LHS []uintptr
+	RHS []uintptr
+}
+
+func (v *visited) add(lhs, rhs reflect.Value) error {
+	if canAddr(lhs) {
+		if inPointers(v.LHS, lhs) {
+			return ErrCyclic
+		}
+		v.LHS = append(v.LHS, lhs.Pointer())
+	}
+	if canAddr(rhs) {
+		if inPointers(v.RHS, rhs) {
+			return ErrCyclic
+		}
+		v.RHS = append(v.RHS, rhs.Pointer())
+	}
+
+	return nil
+}
+
+func inPointers(pointers []uintptr, val reflect.Value) bool {
+	for _, lhs := range pointers {
+		if lhs == val.Pointer() {
+			return true
+		}
+	}
+
+	return false
+}
+
+func canAddr(val reflect.Value) bool {
+	switch val.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Map:
+		fallthrough
+	case reflect.Ptr, reflect.Slice, reflect.UnsafePointer:
+		return true
+	}
+
+	return false
 }

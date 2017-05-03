@@ -223,7 +223,7 @@ func TestSlice(t *testing.T) {
 			Type: ContentDiffer,
 		},
 	} {
-		typ, err := newSlice(test.LHS, test.RHS)
+		typ, err := newSlice(test.LHS, test.RHS, &visited{})
 
 		if err != nil {
 			t.Errorf("NewSlice(%+v, %+v): unexpected error: %q", test.LHS, test.RHS, err)
@@ -238,7 +238,7 @@ func TestSlice(t *testing.T) {
 		testStrings("TestSlice", t, test, ss, indented)
 	}
 
-	invalid, err := newSlice(nil, nil)
+	invalid, err := newSlice(nil, nil, &visited{})
 	if invalidErr, ok := err.(errInvalidType); ok {
 		if !strings.Contains(invalidErr.Error(), "nil") {
 			t.Errorf("NewSlice(nil, nil): unexpected format for InvalidType error: got %s", err)
@@ -256,7 +256,7 @@ func TestSlice(t *testing.T) {
 		t.Errorf("invalidSlice.StringIndent(%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
 	}
 
-	invalid, err = newSlice([]int{}, nil)
+	invalid, err = newSlice([]int{}, nil, &visited{})
 	if invalidErr, ok := err.(errInvalidType); ok {
 		if !strings.Contains(invalidErr.Error(), "nil") {
 			t.Errorf("NewSlice([]int{}, nil): unexpected format for InvalidType error: got %s", err)
@@ -338,7 +338,7 @@ func TestMap(t *testing.T) {
 			Type: ContentDiffer,
 		},
 	} {
-		m, err := newMap(test.LHS, test.RHS)
+		m, err := newMap(test.LHS, test.RHS, &visited{})
 
 		if err != nil {
 			t.Errorf("NewMap(%+v, %+v): unexpected error: %q", test.LHS, test.RHS, err)
@@ -353,7 +353,7 @@ func TestMap(t *testing.T) {
 		testStrings(fmt.Sprintf("TestMap[%d]", i), t, test, ss, indented)
 	}
 
-	invalid, err := newMap(nil, nil)
+	invalid, err := newMap(nil, nil, &visited{})
 	if invalidErr, ok := err.(errInvalidType); ok {
 		if !strings.Contains(invalidErr.Error(), "nil") {
 			t.Errorf("NewMap(nil, nil): unexpected format for InvalidType error: got %s", err)
@@ -371,7 +371,7 @@ func TestMap(t *testing.T) {
 		t.Errorf("invalidMap.StringIndent(%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
 	}
 
-	invalid, err = newMap(map[int]int{}, nil)
+	invalid, err = newMap(map[int]int{}, nil, &visited{})
 	if invalidErr, ok := err.(errInvalidType); ok {
 		if !strings.Contains(invalidErr.Error(), "nil") {
 			t.Errorf("NewMap(map[int]int{}, nil): unexpected format for InvalidType error: got %s", err)
@@ -387,6 +387,47 @@ func TestMap(t *testing.T) {
 	indented = invalid.StringIndent(testKey, testPrefix, testOutput)
 	if indented != "" {
 		t.Errorf("invalidMap.StringIndent(%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
+	}
+}
+
+func TestCircular(t *testing.T) {
+	first := map[int]interface{}{}
+	second := map[int]interface{}{
+		0: first,
+	}
+	first[0] = second
+	notCyclic := map[int]interface{}{
+		0: map[int]interface{}{
+			0: map[int]interface{}{
+				0: "foo",
+			},
+		},
+	}
+
+	for _, test := range []struct {
+		lhs       interface{}
+		rhs       interface{}
+		wantError bool
+	}{
+		{lhs: first, rhs: first, wantError: true},
+		{lhs: first, rhs: second, wantError: true},
+		{lhs: first, rhs: second, wantError: true},
+		{lhs: first, rhs: notCyclic, wantError: true},
+		{lhs: notCyclic, rhs: first, wantError: true},
+		{lhs: notCyclic, rhs: notCyclic},
+	} {
+		d, err := Diff(test.lhs, test.rhs)
+
+		if test.wantError && (err == nil || err != ErrCyclic) {
+			t.Errorf("Expected error %q, got %q", ErrCyclic, err)
+		}
+		if !test.wantError && err != nil {
+			t.Errorf("Unexpected error %q", err)
+		}
+
+		if test.wantError && d.Diff() != ContentDiffer {
+			t.Errorf("Expected Diff() to be %s, got %s", ContentDiffer, d.Diff())
+		}
 	}
 }
 

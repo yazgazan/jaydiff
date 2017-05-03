@@ -20,7 +20,7 @@ type sliceExcess struct {
 	value interface{}
 }
 
-func newSlice(lhs, rhs interface{}) (Differ, error) {
+func newSlice(lhs, rhs interface{}, visited *visited) (Differ, error) {
 	var diffs []Differ
 
 	lhsVal := reflect.ValueOf(lhs)
@@ -39,7 +39,7 @@ func newSlice(lhs, rhs interface{}) (Differ, error) {
 
 		for i := 0; i < nElems; i++ {
 			if i < lhsVal.Len() && i < rhsVal.Len() {
-				diff, err := Diff(lhsVal.Index(i).Interface(), rhsVal.Index(i).Interface())
+				diff, err := diff(lhsVal.Index(i).Interface(), rhsVal.Index(i).Interface(), visited)
 				if diff.Diff() != Identical {
 				}
 				diffs = append(diffs, diff)
