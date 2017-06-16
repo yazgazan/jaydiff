@@ -502,3 +502,58 @@ func testStrings(context string, t *testing.T, test stringTest, ss []string, ind
 		}
 	}
 }
+
+func TestIsScalar(t *testing.T) {
+	d, err := Diff(42, 23)
+	if err != nil {
+		t.Errorf("Diff(42, 23): unexpected error: %s", err)
+		return
+	}
+	if !IsScalar(d) {
+		t.Error("IsScalar(Diff(42, 23)) = false, expected true")
+	}
+}
+
+func TestIsTypes(t *testing.T) {
+	d, err := Diff(42, []string{"hop"})
+	if err != nil {
+		t.Errorf("Diff(42, \"hop\"): unexpected error: %s", err)
+		return
+	}
+	if !IsTypes(d) {
+		t.Error("IsTypes(Diff(42, \"hop\")) = false, expected true")
+	}
+}
+
+func TestIsIgnore(t *testing.T) {
+	d, err := Ignore()
+	if err != nil {
+		t.Errorf("Ignore(): unexpected error: %s", err)
+		return
+	}
+	if !IsIgnore(d) {
+		t.Error("IsIgnore(Ignore()) = false, expected true")
+	}
+}
+
+func TestIsMap(t *testing.T) {
+	d, err := Diff(map[int]bool{0: true, 1: false}, map[int]bool{0: false, 1: true})
+	if err != nil {
+		t.Errorf("Diff(map[int]bool, map[int]bool): unexpected error: %s", err)
+		return
+	}
+	if !IsMap(d) {
+		t.Error("IsMap(Diff(map[int]bool, map[int]bool)) = false, expected true")
+	}
+}
+
+func TestIsSlice(t *testing.T) {
+	d, err := Diff([]int{0, 1}, []int{2, 3})
+	if err != nil {
+		t.Errorf("Diff([]int, []int): unexpected error: %s", err)
+		return
+	}
+	if !IsSlice(d) {
+		t.Error("IsSlice(Diff(map{...}, map{...})) = false, expected true")
+	}
+}
