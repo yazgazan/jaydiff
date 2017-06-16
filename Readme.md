@@ -28,6 +28,7 @@ Application Options:
       --indent=        indent string (default: "\t")
   -t, --show-types     show types
       --ignore-excess  ignore excess keys and arrey elements
+      --ignore-values  ignore scalar's values (only type is compared)
   -r, --report         output report format
 
 Help Options:
@@ -109,6 +110,17 @@ $ jaydiff --report --show-types --ignore-excess old.json new.json
 + .b[]: float64 5
 - .c.a: string toto
 + .c.a: string titi
+- .c.b: float64 23
++ .c.b: string 23
+- .e: []interface {} []
+- .f: float64 42
+```
+
+Ignore values (type must still match):
+
+```diff
+$ jaydiff --report --show-types --ignore-excess --ignore-values old.json new.json
+
 - .c.b: float64 23
 + .c.b: string 23
 - .e: []interface {} []
