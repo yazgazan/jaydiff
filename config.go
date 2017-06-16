@@ -18,6 +18,7 @@ type config struct {
 	Ignore ignorePatterns `long:"ignore" short:"i" description:"paths to ignore (glob)"`
 	output
 	IgnoreExcess bool `long:"ignore-excess" description:"ignore excess keys and arrey elements"`
+	IgnoreValues bool `long:"ignore-values" description:"ignore scalar's values (only type is compared)"`
 	OutputReport bool `long:"report" short:"r" description:"output report format"`
 }
 

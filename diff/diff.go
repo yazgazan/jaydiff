@@ -88,7 +88,7 @@ func (t Type) String() string {
 	return "invalid type"
 }
 
-// IsExcess can be used in a WalkFn to find values missing from the LHS
+// IsExcess returns true if d represent value missing from the LHS (in a map or an array)
 func IsExcess(d Differ) bool {
 	switch d.(type) {
 	default:
@@ -100,7 +100,7 @@ func IsExcess(d Differ) bool {
 	}
 }
 
-// IsMissing can be used in a WalkFn to find values missing from the RHS
+// IsMissing returns true if d represent value missing from the RHS (in a map or an array)
 func IsMissing(d Differ) bool {
 	switch d.(type) {
 	default:
@@ -112,23 +112,58 @@ func IsMissing(d Differ) bool {
 	}
 }
 
+// IsScalar returns true of d is a diff between two values that can be compared (int, float64, string, ...)
+func IsScalar(d Differ) bool {
+	_, ok := d.(scalar)
+
+	return ok
+}
+
+// IsTypes returns true if d is a diff between two values of different types that cannot be compared
+func IsTypes(d Differ) bool {
+	_, ok := d.(types)
+
+	return ok
+}
+
+// IsIgnore returns true if d is a diff created by NewIgnore
+func IsIgnore(d Differ) bool {
+	_, ok := d.(ignore)
+
+	return ok
+}
+
+// IsMap returns true if d is a diff between towo maps
+func IsMap(d Differ) bool {
+	_, ok := d.(mapDiff)
+
+	return ok
+}
+
+// IsSlice returns true if d is a diff between towo slices
+func IsSlice(d Differ) bool {
+	_, ok := d.(slice)
+
+	return ok
+}
+
 type visited struct {
-	LHS []uintptr
-	RHS []uintptr
+	lhs []uintptr
+	rhs []uintptr
 }
 
 func (v *visited) add(lhs, rhs reflect.Value) error {
 	if canAddr(lhs) {
-		if inPointers(v.LHS, lhs) {
+		if inPointers(v.lhs, lhs) {
 			return ErrCyclic
 		}
-		v.LHS = append(v.LHS, lhs.Pointer())
+		v.lhs = append(v.lhs, lhs.Pointer())
 	}
 	if canAddr(rhs) {
-		if inPointers(v.RHS, rhs) {
+		if inPointers(v.rhs, rhs) {
 			return ErrCyclic
 		}
-		v.RHS = append(v.RHS, rhs.Pointer())
+		v.rhs = append(v.rhs, rhs.Pointer())
 	}
 
 	return nil
