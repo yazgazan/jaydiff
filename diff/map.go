@@ -21,7 +21,7 @@ type mapExcess struct {
 	value interface{}
 }
 
-func newMap(lhs, rhs interface{}, visited *visited) (Differ, error) {
+func newMap(c config, lhs, rhs interface{}, visited *visited) (Differ, error) {
 	var diffs = make(map[interface{}]Differ)
 
 	lhsVal := reflect.ValueOf(lhs)
@@ -41,7 +41,7 @@ func newMap(lhs, rhs interface{}, visited *visited) (Differ, error) {
 			rhsEl := rhsVal.MapIndex(key)
 
 			if lhsEl.IsValid() && rhsEl.IsValid() {
-				diff, err := diff(lhsEl.Interface(), rhsEl.Interface(), visited)
+				diff, err := diff(c, lhsEl.Interface(), rhsEl.Interface(), visited)
 				if diff.Diff() != Identical {
 				}
 				diffs[key.Interface()] = diff

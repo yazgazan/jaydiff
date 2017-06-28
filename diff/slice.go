@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	myersdiff "github.com/mb0/diff"
 )
 
 type slice struct {
@@ -20,7 +22,98 @@ type sliceExcess struct {
 	value interface{}
 }
 
-func newSlice(lhs, rhs interface{}, visited *visited) (Differ, error) {
+type diffData struct {
+	lhs       reflect.Value
+	rhs       reflect.Value
+	visited   *visited
+	lastError error
+	c         config
+}
+
+func (d *diffData) Equal(i, j int) bool {
+	diff, err := diff(d.c, d.lhs.Index(i).Interface(), d.rhs.Index(j).Interface(), d.visited)
+	if err != nil {
+		d.lastError = err
+		return false
+	}
+
+	return diff.Diff() == Identical
+}
+
+func myersToDiff(conf config, lhs, rhs reflect.Value, changes []myersdiff.Change) []Differ {
+	res := []Differ{}
+
+	lhsIdx := 0
+	rhsIdx := 0
+	for _, c := range changes {
+		for i := 0; lhsIdx+i < c.A; i++ {
+			diff, _ := diff(conf, lhs.Index(lhsIdx+i).Interface(), rhs.Index(rhsIdx+i).Interface(), &visited{})
+			res = append(res, diff)
+		}
+		lhsIdx = c.A
+		rhsIdx = c.B
+		for d := 0; d < c.Del; d++ {
+			res = append(res, sliceMissing{lhs.Index(lhsIdx + d).Interface()})
+		}
+		lhsIdx += c.Del
+		for i := 0; i < c.Ins; i++ {
+			res = append(res, sliceExcess{rhs.Index(rhsIdx + i).Interface()})
+		}
+		rhsIdx += c.Ins
+	}
+
+	for lhsIdx < lhs.Len() && rhsIdx < rhs.Len() {
+		diff, _ := diff(conf, lhs.Index(lhsIdx).Interface(), rhs.Index(rhsIdx).Interface(), &visited{})
+		res = append(res, diff)
+		lhsIdx++
+		rhsIdx++
+	}
+	return res
+}
+
+func newMyersSlice(c config, lhs, rhs interface{}, visited *visited) (Differ, error) {
+	var diffs []Differ
+
+	lhsVal := reflect.ValueOf(lhs)
+	rhsVal := reflect.ValueOf(rhs)
+
+	if typesDiffer, err := sliceTypesDiffer(lhs, rhs); err != nil {
+		return slice{
+			lhs: lhs,
+			rhs: rhs,
+		}, err
+	} else if !typesDiffer {
+		nElems := lhsVal.Len()
+		if rhsVal.Len() > nElems {
+			nElems = rhsVal.Len()
+		}
+
+		dData := diffData{
+			lhs:     lhsVal,
+			rhs:     rhsVal,
+			visited: visited,
+			c:       c,
+		}
+		myers := myersdiff.Diff(lhsVal.Len(), rhsVal.Len(), &dData)
+
+		diffs = myersToDiff(c, lhsVal, rhsVal, myers)
+		if dData.lastError != nil {
+			return slice{
+				lhs:   lhs,
+				rhs:   rhs,
+				diffs: diffs,
+			}, dData.lastError
+		}
+	}
+
+	return slice{
+		lhs:   lhs,
+		rhs:   rhs,
+		diffs: diffs,
+	}, nil
+}
+
+func newSlice(c config, lhs, rhs interface{}, visited *visited) (Differ, error) {
 	var diffs []Differ
 
 	lhsVal := reflect.ValueOf(lhs)
@@ -39,7 +132,7 @@ func newSlice(lhs, rhs interface{}, visited *visited) (Differ, error) {
 
 		for i := 0; i < nElems; i++ {
 			if i < lhsVal.Len() && i < rhsVal.Len() {
-				diff, err := diff(lhsVal.Index(i).Interface(), rhsVal.Index(i).Interface(), visited)
+				diff, err := diff(c, lhsVal.Index(i).Interface(), rhsVal.Index(i).Interface(), visited)
 				if diff.Diff() != Identical {
 				}
 				diffs = append(diffs, diff)

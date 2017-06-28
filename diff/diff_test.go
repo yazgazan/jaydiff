@@ -69,12 +69,57 @@ func TestDiff(t *testing.T) {
 
 		if diff.Diff() != test.Want {
 			t.Logf("LHS: %+#v\n", test.LHS)
-			t.Logf("LHS: %+#v\n", test.RHS)
+			t.Logf("RHS: %+#v\n", test.RHS)
 			t.Errorf("Diff(%#v, %#v) = %q, expected %q", test.LHS, test.RHS, diff.Diff(), test.Want)
 		}
 	}
 }
 
+func TestDiffMyers(t *testing.T) {
+	for _, test := range []struct {
+		LHS   interface{}
+		RHS   interface{}
+		Want  Type
+		Error bool
+	}{
+		{LHS: []int{1, 2, 3}, RHS: []int{1, 2, 3}, Want: Identical},
+		{LHS: []int{1, 2, 3, 4}, RHS: []int{1, 2, 3}, Want: ContentDiffer},
+		{LHS: []int{1, 2, 3}, RHS: []int{1, 2, 3, 4}, Want: ContentDiffer},
+		{LHS: []int{1, 2, 3}, RHS: []int{4, 5}, Want: ContentDiffer},
+		{LHS: []int{1, 2, 3}, RHS: []float64{4, 5}, Want: TypesDiffer},
+		{LHS: []int{1, 2, 3}, RHS: []float64{4, 5}, Want: TypesDiffer},
+		{LHS: []func(){func() {}}, RHS: []func(){func() {}}, Want: ContentDiffer, Error: true},
+		{
+			LHS:  map[int][]int{1: {2, 3}, 2: {3, 4}},
+			RHS:  map[int][]int{1: {2, 3}, 2: {3, 4}},
+			Want: Identical,
+		},
+		{
+			LHS:  map[int][]int{1: {2, 3}, 2: {3, 4}},
+			RHS:  map[int][]int{1: {2, 3}, 2: {3, 5}},
+			Want: ContentDiffer,
+		},
+		{LHS: []interface{}{1, 2, 3}, RHS: []interface{}{1, 2, 3}, Want: Identical},
+		{LHS: []interface{}{1, 2, 3}, RHS: []interface{}{1, 2, 3.3}, Want: ContentDiffer},
+		{LHS: []interface{}(nil), RHS: []interface{}{1, 2, 3.3}, Want: ContentDiffer},
+		{LHS: []int(nil), RHS: []int{}, Want: Identical},
+	} {
+		diff, err := Diff(test.LHS, test.RHS, UseSliceMyers())
+
+		if err == nil && test.Error {
+			t.Errorf("Diff(%#v, %#v) expected an error, got nil instead", test.LHS, test.RHS)
+		}
+		if err != nil && !test.Error {
+			t.Errorf("Diff(%#v, %#v): unexpected error: %q", test.LHS, test.RHS, err)
+		}
+
+		if diff.Diff() != test.Want {
+			t.Logf("LHS: %+#v\n", test.LHS)
+			t.Logf("RHS: %+#v\n", test.RHS)
+			t.Errorf("Diff(%#v, %#v) = %q, expected %q", test.LHS, test.RHS, diff.Diff(), test.Want)
+		}
+	}
+}
 func TestTypeString(t *testing.T) {
 	for _, test := range []struct {
 		Input Type
@@ -223,7 +268,7 @@ func TestSlice(t *testing.T) {
 			Type: ContentDiffer,
 		},
 	} {
-		typ, err := newSlice(test.LHS, test.RHS, &visited{})
+		typ, err := newSlice(defaultConfig(), test.LHS, test.RHS, &visited{})
 
 		if err != nil {
 			t.Errorf("NewSlice(%+v, %+v): unexpected error: %q", test.LHS, test.RHS, err)
@@ -238,7 +283,7 @@ func TestSlice(t *testing.T) {
 		testStrings("TestSlice", t, test, ss, indented)
 	}
 
-	invalid, err := newSlice(nil, nil, &visited{})
+	invalid, err := newSlice(defaultConfig(), nil, nil, &visited{})
 	if invalidErr, ok := err.(errInvalidType); ok {
 		if !strings.Contains(invalidErr.Error(), "nil") {
 			t.Errorf("NewSlice(nil, nil): unexpected format for InvalidType error: got %s", err)
@@ -256,13 +301,120 @@ func TestSlice(t *testing.T) {
 		t.Errorf("invalidSlice.StringIndent(%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
 	}
 
-	invalid, err = newSlice([]int{}, nil, &visited{})
+	invalid, err = newSlice(defaultConfig(), []int{}, nil, &visited{})
 	if invalidErr, ok := err.(errInvalidType); ok {
 		if !strings.Contains(invalidErr.Error(), "nil") {
 			t.Errorf("NewSlice([]int{}, nil): unexpected format for InvalidType error: got %s", err)
 		}
 	} else {
 		t.Errorf("NewSlice([]int{}, nil): expected InvalidType error, got %s", err)
+	}
+	ss = invalid.Strings()
+	if len(ss) != 0 {
+		t.Errorf("len(invalidSlice.Strings()) = %d, expected 0", len(ss))
+	}
+
+	indented = invalid.StringIndent(testKey, testPrefix, testOutput)
+	if indented != "" {
+		t.Errorf("invalidSlice.StringIndent(%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
+	}
+}
+
+func TestSliceMyers(t *testing.T) {
+	c := defaultConfig()
+	c = UseSliceMyers()(c)
+
+	for _, test := range []stringTest{
+		{
+			LHS: []int{1, 2},
+			RHS: []int{1, 2},
+			Want: [][]string{
+				{"int", "1", "2"},
+			},
+			Type: Identical,
+		},
+		{
+			LHS: []int{1},
+			RHS: []int{},
+			Want: [][]string{
+				{},
+				{"-", "int", "1"},
+				{},
+			},
+			Type: ContentDiffer,
+		},
+		{
+			LHS: []int{},
+			RHS: []int{2},
+			Want: [][]string{
+				{},
+				{"+", "int", "2"},
+				{},
+			},
+			Type: ContentDiffer,
+		},
+		{
+			LHS: []int{1, 2},
+			RHS: []float64{1.1, 2.1},
+			Want: [][]string{
+				{"-", "int", "1", "2"},
+				{"+", "float64", "1.1", "2.1"},
+			},
+			Type: TypesDiffer,
+		},
+		{
+			LHS: []int{1, 3},
+			RHS: []int{1, 2},
+			Want: [][]string{
+				{},
+				{"int", "1"},
+				{"-", "int", "3"},
+				{"+", "int", "2"},
+				{},
+			},
+			Type: ContentDiffer,
+		},
+	} {
+		typ, err := c.sliceFn(c, test.LHS, test.RHS, &visited{})
+
+		if err != nil {
+			t.Errorf("NewMyersSlice(%+v, %+v): unexpected error: %q", test.LHS, test.RHS, err)
+			continue
+		}
+		if typ.Diff() != test.Type {
+			t.Errorf("Types.Diff() = %q, expected %q", typ.Diff(), test.Type)
+		}
+
+		ss := typ.Strings()
+		indented := typ.StringIndent(testKey, testPrefix, testOutput)
+		testStrings("TestSlice", t, test, ss, indented)
+	}
+
+	invalid, err := c.sliceFn(c, nil, nil, &visited{})
+	if invalidErr, ok := err.(errInvalidType); ok {
+		if !strings.Contains(invalidErr.Error(), "nil") {
+			t.Errorf("NewMyersSlice(nil, nil): unexpected format for InvalidType error: got %s", err)
+		}
+	} else {
+		t.Errorf("NewMyersSlice(nil, nil): expected InvalidType error, got %s", err)
+	}
+	ss := invalid.Strings()
+	if len(ss) != 0 {
+		t.Errorf("len(invalidSlice.Strings()) = %d, expected 0", len(ss))
+	}
+
+	indented := invalid.StringIndent(testKey, testPrefix, testOutput)
+	if indented != "" {
+		t.Errorf("invalidSlice.StringIndent(%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
+	}
+
+	invalid, err = c.sliceFn(c, []int{}, nil, &visited{})
+	if invalidErr, ok := err.(errInvalidType); ok {
+		if !strings.Contains(invalidErr.Error(), "nil") {
+			t.Errorf("NewMyersSlice([]int{}, nil): unexpected format for InvalidType error: got %s", err)
+		}
+	} else {
+		t.Errorf("NewMyersSlice([]int{}, nil): expected InvalidType error, got %s", err)
 	}
 	ss = invalid.Strings()
 	if len(ss) != 0 {
@@ -338,7 +490,7 @@ func TestMap(t *testing.T) {
 			Type: ContentDiffer,
 		},
 	} {
-		m, err := newMap(test.LHS, test.RHS, &visited{})
+		m, err := newMap(defaultConfig(), test.LHS, test.RHS, &visited{})
 
 		if err != nil {
 			t.Errorf("NewMap(%+v, %+v): unexpected error: %q", test.LHS, test.RHS, err)
@@ -353,7 +505,7 @@ func TestMap(t *testing.T) {
 		testStrings(fmt.Sprintf("TestMap[%d]", i), t, test, ss, indented)
 	}
 
-	invalid, err := newMap(nil, nil, &visited{})
+	invalid, err := newMap(defaultConfig(), nil, nil, &visited{})
 	if invalidErr, ok := err.(errInvalidType); ok {
 		if !strings.Contains(invalidErr.Error(), "nil") {
 			t.Errorf("NewMap(nil, nil): unexpected format for InvalidType error: got %s", err)
@@ -371,7 +523,7 @@ func TestMap(t *testing.T) {
 		t.Errorf("invalidMap.StringIndent(%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
 	}
 
-	invalid, err = newMap(map[int]int{}, nil, &visited{})
+	invalid, err = newMap(defaultConfig(), map[int]int{}, nil, &visited{})
 	if invalidErr, ok := err.(errInvalidType); ok {
 		if !strings.Contains(invalidErr.Error(), "nil") {
 			t.Errorf("NewMap(map[int]int{}, nil): unexpected format for InvalidType error: got %s", err)

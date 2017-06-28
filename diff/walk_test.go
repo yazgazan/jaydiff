@@ -32,7 +32,7 @@ func TestWalk(t *testing.T) {
 			continue
 		}
 
-		_, err = Walk(d, func(_, diff Differ, _ string) (Differ, error) {
+		_, err = Walk(d, func(_, diff Differ, p string) (Differ, error) {
 			nCalls++
 			return nil, nil
 		})
@@ -57,7 +57,7 @@ func TestWalkError(t *testing.T) {
 		RHS interface{}
 	}{
 		{42, 43},
-		{[]int{42}, []int{44}},
+		{[]int{42}, []int{43}},
 		{map[string]int{"ha": 42}, map[string]int{"ha": 45}},
 	} {
 		d, err := Diff(test.LHS, test.RHS)
@@ -68,6 +68,9 @@ func TestWalkError(t *testing.T) {
 
 		_, err = Walk(d, func(_, diff Differ, _ string) (Differ, error) {
 			if _, ok := diff.(scalar); ok {
+				return nil, expectedErr
+			}
+			if _, ok := diff.(sliceMissing); ok {
 				return nil, expectedErr
 			}
 
