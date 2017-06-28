@@ -23,7 +23,7 @@ func (o Output) red(v interface{}) string {
 	}
 
 	if !o.Colorized {
-		return fmt.Sprintf("%s", s)
+		return s
 	}
 
 	return color.RedString("%s", s)
@@ -39,7 +39,7 @@ func (o Output) green(v interface{}) string {
 	}
 
 	if !o.Colorized {
-		return fmt.Sprintf("%s", s)
+		return s
 	}
 
 	return color.GreenString("%s", s)
@@ -54,7 +54,7 @@ func (o Output) white(v interface{}) string {
 		s = fmt.Sprintf("%v", v)
 	}
 
-	return fmt.Sprintf("%s", s)
+	return s
 }
 
 func (o Output) typ(v interface{}) string {

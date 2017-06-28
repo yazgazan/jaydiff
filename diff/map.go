@@ -42,8 +42,6 @@ func newMap(c config, lhs, rhs interface{}, visited *visited) (Differ, error) {
 
 			if lhsEl.IsValid() && rhsEl.IsValid() {
 				diff, err := diff(c, lhsEl.Interface(), rhsEl.Interface(), visited)
-				if diff.Diff() != Identical {
-				}
 				diffs[key.Interface()] = diff
 
 				if err != nil {

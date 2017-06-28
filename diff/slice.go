@@ -83,11 +83,6 @@ func newMyersSlice(c config, lhs, rhs interface{}, visited *visited) (Differ, er
 			rhs: rhs,
 		}, err
 	} else if !typesDiffer {
-		nElems := lhsVal.Len()
-		if rhsVal.Len() > nElems {
-			nElems = rhsVal.Len()
-		}
-
 		dData := diffData{
 			lhs:     lhsVal,
 			rhs:     rhsVal,
@@ -133,8 +128,6 @@ func newSlice(c config, lhs, rhs interface{}, visited *visited) (Differ, error) 
 		for i := 0; i < nElems; i++ {
 			if i < lhsVal.Len() && i < rhsVal.Len() {
 				diff, err := diff(c, lhsVal.Index(i).Interface(), rhsVal.Index(i).Interface(), visited)
-				if diff.Diff() != Identical {
-				}
 				diffs = append(diffs, diff)
 
 				if err != nil {
