@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/jessevdk/go-flags"
+	"github.com/yazgazan/jaydiff/diff"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -17,9 +18,11 @@ type config struct {
 	Files  files          `positional-args:"yes" required:"yes"`
 	Ignore ignorePatterns `long:"ignore" short:"i" description:"paths to ignore (glob)"`
 	output
-	IgnoreExcess bool `long:"ignore-excess" description:"ignore excess keys and arrey elements"`
-	IgnoreValues bool `long:"ignore-values" description:"ignore scalar's values (only type is compared)"`
-	OutputReport bool `long:"report" short:"r" description:"output report format"`
+	IgnoreExcess  bool   `long:"ignore-excess" description:"ignore excess keys and arrey elements"`
+	IgnoreValues  bool   `long:"ignore-values" description:"ignore scalar's values (only type is compared)"`
+	OutputReport  bool   `long:"report" short:"r" description:"output report format"`
+	UseSliceMyers bool   `long:"slice-myers" description:"use myers algorithm for slices"`
+	Version       func() `long:"version" short:"v" description:"print release version"`
 }
 
 type output struct {
@@ -30,6 +33,10 @@ type output struct {
 
 func readConfig() config {
 	var c config
+	c.Version = func() {
+		fmt.Fprintf(os.Stderr, "%s\n", Version)
+		os.Exit(0)
+	}
 
 	_, err := flags.Parse(&c)
 	if err != nil {
@@ -43,4 +50,14 @@ func readConfig() config {
 	c.output.Colorized = terminal.IsTerminal(int(os.Stdout.Fd()))
 
 	return c
+}
+
+func (c config) Opts() []diff.ConfigOpt {
+	opts := []diff.ConfigOpt{}
+
+	if c.UseSliceMyers {
+		opts = append(opts, diff.UseSliceMyers())
+	}
+
+	return opts
 }

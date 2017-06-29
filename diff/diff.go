@@ -27,17 +27,22 @@ type Differ interface {
 	StringIndent(key, prefix string, conf Output) string
 }
 
+type diffFn func(c config, lhs, rhs interface{}, visited *visited) (Differ, error)
+
 // Diff generates a tree representing differences and similarities between two objects.
 //
 // Diff supports maps, slices and scalars (comparables types such as int, string, etc ...).
 // When an unsupported type is encountered, an ErrUnsupported error is returned.
-//
-// BUG(yazgazan): An infinite recursion is possible if the lhs and/or rhs objects are cyclic
-func Diff(lhs, rhs interface{}) (Differ, error) {
-	return diff(lhs, rhs, &visited{})
+func Diff(lhs, rhs interface{}, opts ...ConfigOpt) (Differ, error) {
+	c := defaultConfig()
+	for _, opt := range opts {
+		c = opt(c)
+	}
+
+	return diff(c, lhs, rhs, &visited{})
 }
 
-func diff(lhs, rhs interface{}, visited *visited) (Differ, error) {
+func diff(c config, lhs, rhs interface{}, visited *visited) (Differ, error) {
 	lhsVal := reflect.ValueOf(lhs)
 	rhsVal := reflect.ValueOf(rhs)
 
@@ -55,10 +60,10 @@ func diff(lhs, rhs interface{}, visited *visited) (Differ, error) {
 	}
 
 	if lhsVal.Kind() == reflect.Slice {
-		return newSlice(lhs, rhs, visited)
+		return c.sliceFn(c, lhs, rhs, visited)
 	}
 	if lhsVal.Kind() == reflect.Map {
-		return newMap(lhs, rhs, visited)
+		return newMap(c, lhs, rhs, visited)
 	}
 
 	return types{lhs, rhs}, &ErrUnsupported{lhsVal.Type(), rhsVal.Type()}

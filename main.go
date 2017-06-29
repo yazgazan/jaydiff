@@ -17,6 +17,11 @@ const (
 	statusDiffMismatch   = 6
 )
 
+var (
+	// Version is replaced by the tag when creating a new release
+	Version = "dev"
+)
+
 func main() {
 	var err error
 	conf := readConfig()
@@ -24,7 +29,7 @@ func main() {
 	lhs := parseFile(conf.Files.LHS)
 	rhs := parseFile(conf.Files.RHS)
 
-	d, err := diff.Diff(lhs, rhs)
+	d, err := diff.Diff(lhs, rhs, conf.Opts()...)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: diff failed: %s", err)
 		os.Exit(statusDiffError)
