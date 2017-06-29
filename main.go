@@ -18,6 +18,7 @@ const (
 )
 
 var (
+	// Version is replaced by the tag when creating a new release
 	Version = "dev"
 )
 
