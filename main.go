@@ -17,6 +17,10 @@ const (
 	statusDiffMismatch   = 6
 )
 
+var (
+	Version = "dev"
+)
+
 func main() {
 	var err error
 	conf := readConfig()
