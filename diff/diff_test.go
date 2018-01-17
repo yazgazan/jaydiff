@@ -555,6 +555,22 @@ func TestCircular(t *testing.T) {
 			},
 		},
 	}
+	emptySlice := map[int]interface{}{
+		0: []interface{}{},
+	}
+	emptySlice[1] = emptySlice[0]
+	emptySliceNotRepeating := map[int]interface{}{
+		0: []interface{}{},
+		1: []interface{}{},
+	}
+	emptyMap := map[int]interface{}{
+		0: map[int]interface{}{},
+	}
+	emptyMap[1] = emptyMap[0]
+	emptyMapNotRepeating := map[int]interface{}{
+		0: map[int]interface{}{},
+		1: map[int]interface{}{},
+	}
 
 	for _, test := range []struct {
 		lhs       interface{}
@@ -567,6 +583,10 @@ func TestCircular(t *testing.T) {
 		{lhs: first, rhs: notCyclic, wantError: true},
 		{lhs: notCyclic, rhs: first, wantError: true},
 		{lhs: notCyclic, rhs: notCyclic},
+		{lhs: emptySlice, rhs: emptySliceNotRepeating},
+		{lhs: emptySliceNotRepeating, rhs: emptySlice},
+		{lhs: emptyMap, rhs: emptyMapNotRepeating},
+		{lhs: emptyMapNotRepeating, rhs: emptyMap},
 	} {
 		d, err := Diff(test.lhs, test.rhs)
 
