@@ -245,6 +245,14 @@ func (s slice) Walk(path string, fn WalkFn) error {
 	return nil
 }
 
+func (s slice) LHS() interface{} {
+	return s.lhs
+}
+
+func (s slice) RHS() interface{} {
+	return s.rhs
+}
+
 func (m sliceMissing) Diff() Type {
 	return ContentDiffer
 }
@@ -259,6 +267,10 @@ func (m sliceMissing) StringIndent(key, prefix string, conf Output) string {
 	return "-" + prefix + key + conf.red(m.value)
 }
 
+func (m sliceMissing) LHS() interface{} {
+	return m.value
+}
+
 func (e sliceExcess) Diff() Type {
 	return ContentDiffer
 }
@@ -271,4 +283,8 @@ func (e sliceExcess) Strings() []string {
 
 func (e sliceExcess) StringIndent(key, prefix string, conf Output) string {
 	return "+" + prefix + key + conf.green(e.value)
+}
+
+func (e sliceExcess) RHS() interface{} {
+	return e.value
 }

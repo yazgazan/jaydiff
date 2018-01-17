@@ -24,3 +24,11 @@ func (t types) StringIndent(key, prefix string, conf Output) string {
 	return "-" + prefix + key + conf.red(t.lhs) + "\n" +
 		"+" + prefix + key + conf.green(t.rhs)
 }
+
+func (t types) LHS() interface{} {
+	return t.lhs
+}
+
+func (t types) RHS() interface{} {
+	return t.rhs
+}
