@@ -158,13 +158,13 @@ type visited struct {
 }
 
 func (v *visited) add(lhs, rhs reflect.Value) error {
-	if canAddr(lhs) {
+	if canAddr(lhs) && !isEmptyMapOrSlice(lhs) {
 		if inPointers(v.lhs, lhs) {
 			return ErrCyclic
 		}
 		v.lhs = append(v.lhs, lhs.Pointer())
 	}
-	if canAddr(rhs) {
+	if canAddr(rhs) && !isEmptyMapOrSlice(lhs) {
 		if inPointers(v.rhs, rhs) {
 			return ErrCyclic
 		}
@@ -172,6 +172,11 @@ func (v *visited) add(lhs, rhs reflect.Value) error {
 	}
 
 	return nil
+}
+
+func isEmptyMapOrSlice(v reflect.Value) bool {
+	// we don't want to include empty slices and maps in our cyclic check, since these are not problematic
+	return (v.Kind() == reflect.Slice || v.Kind() == reflect.Map) && v.Len() == 0
 }
 
 func inPointers(pointers []uintptr, val reflect.Value) bool {
