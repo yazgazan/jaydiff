@@ -152,6 +152,32 @@ func IsSlice(d Differ) bool {
 	return ok
 }
 
+type lhsGetter interface {
+	LHS() interface{}
+}
+
+type rhsGetter interface {
+	RHS() interface{}
+}
+
+// LHS returns the lhs value associated with the Differ.
+func LHS(d Differ) (interface{}, error) {
+	if lhs, ok := d.(lhsGetter); ok {
+		return lhs.LHS(), nil
+	}
+
+	return nil, ErrLHSNotSupported{Diff: d}
+}
+
+// RHS returns the rhs value associated with the Differ.
+func RHS(d Differ) (interface{}, error) {
+	if rhs, ok := d.(rhsGetter); ok {
+		return rhs.RHS(), nil
+	}
+
+	return nil, ErrRHSNotSupported{Diff: d}
+}
+
 type visited struct {
 	lhs []uintptr
 	rhs []uintptr

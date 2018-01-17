@@ -45,3 +45,11 @@ func (s scalar) StringIndent(key, prefix string, conf Output) string {
 	return "-" + prefix + key + conf.red(s.lhs) + "\n" +
 		"+" + prefix + key + conf.green(s.rhs)
 }
+
+func (s scalar) LHS() interface{} {
+	return s.lhs
+}
+
+func (s scalar) RHS() interface{} {
+	return s.rhs
+}

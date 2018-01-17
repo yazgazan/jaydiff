@@ -201,6 +201,15 @@ func (m mapDiff) Walk(path string, fn WalkFn) error {
 
 	return nil
 }
+
+func (m mapDiff) LHS() interface{} {
+	return m.lhs
+}
+
+func (m mapDiff) RHS() interface{} {
+	return m.rhs
+}
+
 func getKeys(lhs, rhs reflect.Value) []reflect.Value {
 	keys := lhs.MapKeys()
 
@@ -236,6 +245,10 @@ func (m mapMissing) StringIndent(key, prefix string, conf Output) string {
 	return "-" + prefix + key + conf.red(m.value)
 }
 
+func (m mapMissing) LHS() interface{} {
+	return m.value
+}
+
 func (e mapExcess) Diff() Type {
 	return ContentDiffer
 }
@@ -248,4 +261,8 @@ func (e mapExcess) Strings() []string {
 
 func (e mapExcess) StringIndent(key, prefix string, conf Output) string {
 	return "+" + prefix + key + conf.green(e.value)
+}
+
+func (e mapExcess) RHS() interface{} {
+	return e.value
 }

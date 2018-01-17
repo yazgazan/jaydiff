@@ -617,6 +617,174 @@ func TestIgnore(t *testing.T) {
 	}
 }
 
+func TestLHS(t *testing.T) {
+	validLHSTypesGetter := Differ(&types{
+		lhs: 42,
+		rhs: "hello",
+	})
+	v, err := LHS(validLHSTypesGetter)
+	if err != nil {
+		t.Errorf("LHS(%+v): unexpected error: %s", validLHSTypesGetter, err)
+	}
+	if i, ok := v.(int); !ok || i != 42 {
+		t.Errorf("LHS(%+v) = %v, expected %d", validLHSTypesGetter, v, 42)
+	}
+
+	validLHSMapGetter := Differ(&mapDiff{
+		lhs: 42,
+		rhs: "hello",
+	})
+	v, err = LHS(validLHSMapGetter)
+	if err != nil {
+		t.Errorf("LHS(%+v): unexpected error: %s", validLHSMapGetter, err)
+	}
+	if i, ok := v.(int); !ok || i != 42 {
+		t.Errorf("LHS(%+v) = %v, expected %d", validLHSMapGetter, v, 42)
+	}
+
+	validLHSSliceGetter := Differ(&slice{
+		lhs: 42,
+		rhs: "hello",
+	})
+	v, err = LHS(validLHSSliceGetter)
+	if err != nil {
+		t.Errorf("LHS(%+v): unexpected error: %s", validLHSSliceGetter, err)
+	}
+	if i, ok := v.(int); !ok || i != 42 {
+		t.Errorf("LHS(%+v) = %v, expected %d", validLHSSliceGetter, v, 42)
+	}
+
+	validLHSScalarGetter := Differ(&scalar{
+		lhs: 42,
+		rhs: "hello",
+	})
+	v, err = LHS(validLHSScalarGetter)
+	if err != nil {
+		t.Errorf("LHS(%+v): unexpected error: %s", validLHSScalarGetter, err)
+	}
+	if i, ok := v.(int); !ok || i != 42 {
+		t.Errorf("LHS(%+v) = %v, expected %d", validLHSScalarGetter, v, 42)
+	}
+
+	validLHSSliceMissingGetter := Differ(&sliceMissing{
+		value: 42,
+	})
+	v, err = LHS(validLHSSliceMissingGetter)
+	if err != nil {
+		t.Errorf("LHS(%+v): unexpected error: %s", validLHSSliceMissingGetter, err)
+	}
+	if i, ok := v.(int); !ok || i != 42 {
+		t.Errorf("LHS(%+v) = %v, expected %d", validLHSSliceMissingGetter, v, 42)
+	}
+
+	validLHSMapMissingGetter := Differ(&mapMissing{
+		value: 42,
+	})
+	v, err = LHS(validLHSMapMissingGetter)
+	if err != nil {
+		t.Errorf("LHS(%+v): unexpected error: %s", validLHSMapMissingGetter, err)
+	}
+	if i, ok := v.(int); !ok || i != 42 {
+		t.Errorf("LHS(%+v) = %v, expected %d", validLHSMapMissingGetter, v, 42)
+	}
+
+	invalidLHSGetter := ignore{}
+	_, err = LHS(invalidLHSGetter)
+	if err == nil {
+		t.Errorf("LHS(%+v): expected error, got nil instead", invalidLHSGetter)
+	}
+	if _, ok := err.(ErrLHSNotSupported); !ok {
+		t.Errorf("LHS(%+v): expected error to be of type %T, got %T instead", invalidLHSGetter, ErrLHSNotSupported{}, err)
+	}
+	if err.Error() == "" {
+		t.Errorf("LHS(%+v): unexpected empty error message")
+	}
+}
+
+func TestRHS(t *testing.T) {
+	validRHSTypesGetter := Differ(&types{
+		lhs: 42,
+		rhs: "hello",
+	})
+	v, err := RHS(validRHSTypesGetter)
+	if err != nil {
+		t.Errorf("RHS(%+v): unexpected error: %s", validRHSTypesGetter, err)
+	}
+	if s, ok := v.(string); !ok || s != "hello" {
+		t.Errorf("RHS(%+v) = %v, expected %q", validRHSTypesGetter, v, "hello")
+	}
+
+	validRHSMapGetter := Differ(&mapDiff{
+		lhs: 42,
+		rhs: "hello",
+	})
+	v, err = RHS(validRHSMapGetter)
+	if err != nil {
+		t.Errorf("RHS(%+v): unexpected error: %s", validRHSMapGetter, err)
+	}
+	if s, ok := v.(string); !ok || s != "hello" {
+		t.Errorf("RHS(%+v) = %v, expected %q", validRHSMapGetter, v, "hello")
+	}
+
+	validRHSSliceGetter := Differ(&slice{
+		lhs: 42,
+		rhs: "hello",
+	})
+	v, err = RHS(validRHSSliceGetter)
+	if err != nil {
+		t.Errorf("RHS(%+v): unexpected error: %s", validRHSSliceGetter, err)
+	}
+	if s, ok := v.(string); !ok || s != "hello" {
+		t.Errorf("RHS(%+v) = %v, expected %q", validRHSSliceGetter, v, "hello")
+	}
+
+	validRHSScalarGetter := Differ(&scalar{
+		lhs: 42,
+		rhs: "hello",
+	})
+	v, err = RHS(validRHSScalarGetter)
+	if err != nil {
+		t.Errorf("RHS(%+v): unexpected error: %s", validRHSScalarGetter, err)
+	}
+	if s, ok := v.(string); !ok || s != "hello" {
+		t.Errorf("RHS(%+v) = %v, expected %q", validRHSScalarGetter, v, "hello")
+	}
+
+	validRHSSliceExcessGetter := Differ(&sliceExcess{
+		value: "hello",
+	})
+	v, err = RHS(validRHSSliceExcessGetter)
+	if err != nil {
+		t.Errorf("RHS(%+v): unexpected error: %s", validRHSSliceExcessGetter, err)
+	}
+	if s, ok := v.(string); !ok || s != "hello" {
+		t.Errorf("RHS(%+v) = %v, expected %q", validRHSSliceExcessGetter, v, "hello")
+	}
+
+	validRHSMapExcessGetter := Differ(&mapExcess{
+		value: "hello",
+	})
+	v, err = RHS(validRHSMapExcessGetter)
+	if err != nil {
+		t.Errorf("RHS(%+v): unexpected error: %s", validRHSMapExcessGetter, err)
+	}
+	if s, ok := v.(string); !ok || s != "hello" {
+		t.Errorf("RHS(%+v) = %v, expected %q", validRHSMapExcessGetter, v, "hello")
+	}
+
+	invalidRHSGetter := ignore{}
+	_, err = RHS(invalidRHSGetter)
+	if err == nil {
+		t.Errorf("RHS(%+v): expected error, got nil instead", invalidRHSGetter)
+	}
+	if _, ok := err.(ErrRHSNotSupported); !ok {
+		t.Errorf("RHS(%+v): expected error to be of type %T, got %T instead", invalidRHSGetter, ErrLHSNotSupported{}, err)
+	}
+	if err.Error() == "" {
+		t.Errorf("RHS(%+v): unexpected empty error message")
+	}
+}
+
 func TestReport(t *testing.T) {
 	want := []string{
 		"content",
