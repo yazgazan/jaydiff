@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 set -o pipefail -o nounset -o errexit -o errtrace
 
 # Find our .git directory

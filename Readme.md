@@ -5,6 +5,8 @@
 [![Build Status](https://travis-ci.org/yazgazan/jaydiff.svg?branch=master)](https://travis-ci.org/yazgazan/jaydiff)
 [![Coverage Status](https://coveralls.io/repos/github/yazgazan/jaydiff/badge.svg?branch=master)](https://coveralls.io/github/yazgazan/jaydiff?branch=master)
 
+A JSON diff utility.
+
 # Install
 
 ## Downloading the compiled binary
