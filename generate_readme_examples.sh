@@ -30,6 +30,14 @@ $ jaydiff --report --show-types old.json new.json
 $(./jaydiff --report --indent='    ' --show-types test_files/lhs.json test_files/rhs.json)
 $(echo '```')
 
+JSON-like format:
+
+$(echo '```diff')
+$ jaydiff --json old.json new.json
+
+$(./jaydiff --json --indent='    ' test_files/lhs.json test_files/rhs.json)
+$(echo '```')
+
 Ignore Excess values (useful when checking for backward compatibility):
 
 $(echo '```diff')

@@ -29,9 +29,12 @@ Application Options:
   -i, --ignore=        paths to ignore (glob)
       --indent=        indent string (default: "\t")
   -t, --show-types     show types
+      --json           json-style output
       --ignore-excess  ignore excess keys and arrey elements
       --ignore-values  ignore scalar's values (only type is compared)
   -r, --report         output report format
+      --slice-myers    use myers algorithm for slices
+  -v, --version        print release version
 
 Help Options:
   -h, --help           Show this help message
@@ -101,6 +104,32 @@ $ jaydiff --report --show-types old.json new.json
 - .e: []interface {} []
 - .f: float64 42
 + .h: float64 42
+```
+
+JSON-like format:
+
+```diff
+$ jaydiff --json old.json new.json
+
+ {
+     "a": 42,
+     "b": [
+         1,
+-        3,
++        5,
++        4
+     ],
+     "c": {
+-        "a": "toto",
++        "a": "titi",
+-        "b": 23,
++        "b": "23"
+     },
+-    "e": [],
+-    "f": 42,
+     "g": [1,2,3],
++    "h": 42
+ }
 ```
 
 Ignore Excess values (useful when checking for backward compatibility):
