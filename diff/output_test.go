@@ -44,10 +44,11 @@ func TestOutput(t *testing.T) {
 		},
 		{
 			Output: Output{
-				Indent:    "\t",
-				Colorized: true,
-				ShowTypes: false,
-				JSON:      true,
+				Indent:     "\t",
+				Colorized:  true,
+				ShowTypes:  false,
+				JSON:       true,
+				JSONValues: true,
 			},
 			WantVal:  []string{"5"},
 			WantType: []string{},

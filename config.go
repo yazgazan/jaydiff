@@ -26,10 +26,11 @@ type config struct {
 }
 
 type output struct {
-	Indent    string `long:"indent" description:"indent string" default:"\t"`
-	ShowTypes bool   `long:"show-types" short:"t" description:"show types"`
-	Colorized bool
-	JSON      bool `long:"json" description:"json-style output"`
+	Indent     string `long:"indent" description:"indent string" default:"\t"`
+	ShowTypes  bool   `long:"show-types" short:"t" description:"show types"`
+	Colorized  bool
+	JSON       bool `long:"json" description:"json-style output"`
+	JSONValues bool
 }
 
 func readConfig() config {
@@ -52,9 +53,11 @@ func readConfig() config {
 		fmt.Fprintf(os.Stderr, "Incompatible options --json and --show-types\n")
 		os.Exit(statusUsage)
 	}
+	if c.JSON {
+		c.JSONValues = true
+	}
 	if c.JSON && c.OutputReport {
-		fmt.Fprintf(os.Stderr, "Incompatible options --json and --report\n")
-		os.Exit(statusUsage)
+		c.JSON = false
 	}
 
 	c.output.Colorized = terminal.IsTerminal(int(os.Stdout.Fd()))
