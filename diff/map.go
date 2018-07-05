@@ -147,10 +147,10 @@ func (m mapDiff) StringIndent(keyprefix, prefix string, conf Output) string {
 	case Identical:
 		return "  " + prefix + keyprefix + conf.white(m.lhs)
 	case TypesDiffer:
-		return "-" + prefix + keyprefix + conf.red(m.lhs) + "\n" +
+		return "-" + prefix + keyprefix + conf.red(m.lhs) + newLineSeparatorString(conf) +
 			"+" + prefix + keyprefix + conf.green(m.rhs)
 	case ContentDiffer:
-		var ss = []string{" " + prefix + keyprefix + conf.typ(m.lhs) + "map["}
+		var ss = []string{}
 		var keys []interface{}
 
 		for key := range m.diffs {
@@ -164,17 +164,43 @@ func (m mapDiff) StringIndent(keyprefix, prefix string, conf Output) string {
 		for _, key := range keys {
 			d := m.diffs[key]
 
-			keyStr := fmt.Sprintf("%v: ", key)
+			keyStr := m.mapKeyString(key, conf)
 			s := d.StringIndent(keyStr, prefix+conf.Indent, conf)
 			if s != "" {
 				ss = append(ss, s)
 			}
 		}
 
-		return strings.Join(append(ss, " "+prefix+"]"), "\n")
+		return strings.Join([]string{
+			m.openString(keyprefix, prefix, conf),
+			strings.Join(ss, newLineSeparatorString(conf)),
+			m.closeString(prefix, conf),
+		}, "\n")
 	}
 
 	return ""
+}
+
+func (m mapDiff) openString(keyprefix, prefix string, conf Output) string {
+	if conf.JSON {
+		return " " + prefix + keyprefix + "{"
+	}
+	return " " + prefix + keyprefix + conf.typ(m.lhs) + "map["
+}
+
+func (m mapDiff) closeString(prefix string, conf Output) string {
+	if conf.JSON {
+		return " " + prefix + "}"
+	}
+	return " " + prefix + "]"
+}
+
+func (m mapDiff) mapKeyString(key interface{}, conf Output) string {
+	if conf.JSON {
+		return fmt.Sprintf("%q: ", key)
+	}
+
+	return fmt.Sprintf("%v: ", key)
 }
 
 func (m mapDiff) Walk(path string, fn WalkFn) error {

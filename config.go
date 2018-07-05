@@ -29,6 +29,7 @@ type output struct {
 	Indent    string `long:"indent" description:"indent string" default:"\t"`
 	ShowTypes bool   `long:"show-types" short:"t" description:"show types"`
 	Colorized bool
+	JSON      bool `long:"json" description:"json-style output"`
 }
 
 func readConfig() config {
@@ -44,6 +45,15 @@ func readConfig() config {
 			os.Exit(0)
 		}
 		fmt.Fprintf(os.Stderr, "Failed to parse arguments. See %s --help\n", os.Args[0])
+		os.Exit(statusUsage)
+	}
+
+	if c.JSON && c.ShowTypes {
+		fmt.Fprintf(os.Stderr, "Incompatible options --json and --show-types\n")
+		os.Exit(statusUsage)
+	}
+	if c.JSON && c.OutputReport {
+		fmt.Fprintf(os.Stderr, "Incompatible options --json and --report\n")
 		os.Exit(statusUsage)
 	}
 

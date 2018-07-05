@@ -213,10 +213,10 @@ func (s slice) StringIndent(key, prefix string, conf Output) string {
 	case Identical:
 		return " " + prefix + key + conf.white(s.lhs)
 	case TypesDiffer:
-		return "-" + prefix + key + conf.red(s.lhs) + "\n" +
+		return "-" + prefix + key + conf.red(s.lhs) + newLineSeparatorString(conf) +
 			"+" + prefix + key + conf.green(s.rhs)
 	case ContentDiffer:
-		var ss = []string{" " + prefix + key + conf.typ(s.lhs) + "["}
+		var ss = []string{}
 
 		for _, d := range s.diffs {
 			s := d.StringIndent("", prefix+conf.Indent, conf)
@@ -225,10 +225,24 @@ func (s slice) StringIndent(key, prefix string, conf Output) string {
 			}
 		}
 
-		return strings.Join(append(ss, " "+prefix+"]"), "\n")
+		return strings.Join(
+			[]string{
+				s.openString(key, prefix, conf),
+				strings.Join(ss, newLineSeparatorString(conf)),
+				" " + prefix + "]",
+			}, "\n",
+		)
 	}
 
 	return ""
+}
+
+func (s slice) openString(key, prefix string, conf Output) string {
+	if conf.JSON {
+		return " " + prefix + key + "["
+	}
+
+	return " " + prefix + key + conf.typ(s.lhs) + "["
 }
 
 func (s slice) Walk(path string, fn WalkFn) error {

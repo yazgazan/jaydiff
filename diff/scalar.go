@@ -42,7 +42,7 @@ func (s scalar) StringIndent(key, prefix string, conf Output) string {
 		return " " + prefix + key + conf.white(s.lhs)
 	}
 
-	return "-" + prefix + key + conf.red(s.lhs) + "\n" +
+	return "-" + prefix + key + conf.red(s.lhs) + newLineSeparatorString(conf) +
 		"+" + prefix + key + conf.green(s.rhs)
 }
 

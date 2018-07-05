@@ -1,6 +1,7 @@
 package diff
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/fatih/color"
@@ -11,6 +12,7 @@ type Output struct {
 	Indent    string
 	ShowTypes bool
 	Colorized bool
+	JSON      bool
 }
 
 func (o Output) red(v interface{}) string {
@@ -18,6 +20,8 @@ func (o Output) red(v interface{}) string {
 
 	if o.ShowTypes {
 		s = fmt.Sprintf("%T %v", v, v)
+	} else if o.JSON {
+		s = jsonString(v)
 	} else {
 		s = fmt.Sprintf("%v", v)
 	}
@@ -34,6 +38,8 @@ func (o Output) green(v interface{}) string {
 
 	if o.ShowTypes {
 		s = fmt.Sprintf("%T %v", v, v)
+	} else if o.JSON {
+		s = jsonString(v)
 	} else {
 		s = fmt.Sprintf("%v", v)
 	}
@@ -50,6 +56,8 @@ func (o Output) white(v interface{}) string {
 
 	if o.ShowTypes {
 		s = fmt.Sprintf("%T %v", v, v)
+	} else if o.JSON {
+		s = jsonString(v)
 	} else {
 		s = fmt.Sprintf("%v", v)
 	}
@@ -63,4 +71,21 @@ func (o Output) typ(v interface{}) string {
 	}
 
 	return ""
+}
+
+func newLineSeparatorString(conf Output) string {
+	if conf.JSON {
+		return ",\n"
+	}
+
+	return "\n"
+}
+
+func jsonString(v interface{}) string {
+	b, err := json.Marshal(v)
+	if err != nil {
+		panic(fmt.Errorf("unexpected error marshaling value: %s", err))
+	}
+
+	return string(b)
 }

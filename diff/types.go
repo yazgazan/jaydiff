@@ -21,7 +21,7 @@ func (t types) Strings() []string {
 }
 
 func (t types) StringIndent(key, prefix string, conf Output) string {
-	return "-" + prefix + key + conf.red(t.lhs) + "\n" +
+	return "-" + prefix + key + conf.red(t.lhs) + newLineSeparatorString(conf) +
 		"+" + prefix + key + conf.green(t.rhs)
 }
 
