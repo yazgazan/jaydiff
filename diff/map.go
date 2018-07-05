@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+
+	"github.com/yazgazan/jaydiff/jpath"
 )
 
 type mapDiff struct {
@@ -216,7 +218,7 @@ func (m mapDiff) Walk(path string, fn WalkFn) error {
 
 	for _, k := range keys {
 		diff := m.diffs[k]
-		d, err := walk(m, diff, fmt.Sprintf("%s.%v", path, k), fn)
+		d, err := walk(m, diff, path+"."+jpath.EscapeKey(k), fn)
 		if err != nil {
 			return err
 		}
