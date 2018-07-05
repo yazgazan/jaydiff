@@ -697,7 +697,7 @@ func TestLHS(t *testing.T) {
 		t.Errorf("LHS(%+v): expected error to be of type %T, got %T instead", invalidLHSGetter, ErrLHSNotSupported{}, err)
 	}
 	if err.Error() == "" {
-		t.Errorf("LHS(%+v): unexpected empty error message")
+		t.Errorf("LHS(%+v): unexpected empty error message", invalidLHSGetter)
 	}
 }
 
@@ -781,7 +781,7 @@ func TestRHS(t *testing.T) {
 		t.Errorf("RHS(%+v): expected error to be of type %T, got %T instead", invalidRHSGetter, ErrLHSNotSupported{}, err)
 	}
 	if err.Error() == "" {
-		t.Errorf("RHS(%+v): unexpected empty error message")
+		t.Errorf("RHS(%+v): unexpected empty error message", invalidRHSGetter)
 	}
 }
 
