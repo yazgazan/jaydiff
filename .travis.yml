@@ -5,12 +5,12 @@ go:
 before_install:
     - go get -u golang.org/x/tools/cmd/cover
     - go get -u github.com/mattn/goveralls
-    - go get -u github.com/alecthomas/gometalinter
-    - gometalinter --install --update
+    - go get -u gopkg.in/alecthomas/gometalinter.v2
+    - gometalinter --install
 
 script:
     - go build
-    - gometalinter --vendored-linters -e '_test.go' ./...
+    - gometalinter.v2 --vendored-linters -e '_test.go' ./...
     - go test -v ./...
     - go test -v -covermode=count -coverprofile=coverage.out ./diff
     - ./tests.sh
