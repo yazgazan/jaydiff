@@ -6,7 +6,7 @@ before_install:
     - go get -u golang.org/x/tools/cmd/cover
     - go get -u github.com/mattn/goveralls
     - go get -u gopkg.in/alecthomas/gometalinter.v2
-    - gometalinter --install
+    - gometalinter.v2 --install
 
 script:
     - go build
