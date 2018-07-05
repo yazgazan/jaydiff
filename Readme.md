@@ -162,4 +162,3 @@ $ jaydiff --report --show-types --ignore-excess --ignore-values old.json new.jso
 
 - JayPatch
 - Have the diff lib support more types (Structs, interfaces (?), Arrays, ...)
-- JSON-ish output (instead of go-ish)
