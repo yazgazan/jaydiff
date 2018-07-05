@@ -60,11 +60,11 @@ func myersToDiff(conf config, lhs, rhs reflect.Value, changes []myersdiff.Change
 			res = append(res, sliceMissing{lhs.Index(lhsIdx + d).Interface()})
 			indices = append(indices, lhsIdx+d)
 		}
-		lhsIdx += c.Del
 		for i := 0; i < c.Ins; i++ {
 			res = append(res, sliceExcess{rhs.Index(rhsIdx + i).Interface()})
-			indices = append(indices, rhsIdx+i)
+			indices = append(indices, lhsIdx+i)
 		}
+		lhsIdx += c.Del
 		rhsIdx += c.Ins
 	}
 
