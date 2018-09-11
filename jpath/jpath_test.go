@@ -1,6 +1,9 @@
 package jpath
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func TestStripIndices(t *testing.T) {
 	for _, test := range []struct {
@@ -62,6 +65,72 @@ func TestHasSuffix(t *testing.T) {
 		got := HasSuffix(test.In, test.Suffix)
 		if got != test.Expected {
 			t.Errorf("HasSuffix(%q, %q) = %v, expected %v", test.In, test.Suffix, got, test.Expected)
+		}
+	}
+}
+
+func TestSplit(t *testing.T) {
+	for _, test := range []struct {
+		In   string
+		Head string
+		Tail string
+	}{
+		{"", "", ""},
+		{".", ".", ""},
+		{"foo", "foo", ""},
+		{".foo.", ".foo", "."},
+		{".foo", ".foo", ""},
+		{".foo.bar", ".foo", ".bar"},
+		{".foo[2].bar.fizz", ".foo", "[2].bar.fizz"},
+		{"[2].bar.fizz", "[2]", ".bar.fizz"},
+		{"[2]", "[2]", ""},
+	} {
+		head, tail := Split(test.In)
+		if head != test.Head || tail != test.Tail {
+			t.Errorf("Split(%q) = (%q, %q), expected (%q, %q)", test.In, head, tail, test.Head, test.Tail)
+		}
+	}
+}
+
+func TestExecutePath(t *testing.T) {
+	for _, test := range []struct {
+		I        interface{}
+		Path     string
+		Expected interface{}
+	}{
+		{
+			map[string]int{"foo": 42},
+			".foo",
+			42,
+		},
+		{
+			map[string][]int{
+				"foo": []int{1, 2, 3},
+				"bar": []int{4, 5, 6},
+			},
+			".foo[1]",
+			2,
+		},
+		{
+			map[string][]map[int]string{
+				"foo": []map[int]string{
+					map[int]string{
+						23: "ha",
+						44: "bar",
+					},
+				},
+			},
+			".foo[0].23",
+			"ha",
+		},
+	} {
+		got, err := ExecutePath(test.Path, test.I)
+		if err != nil {
+			t.Errorf("ExecutePath(%q, %+v): unexpected error: %s", test.Path, test.I, err)
+			continue
+		}
+		if !reflect.DeepEqual(got, test.Expected) {
+			t.Errorf("ExecutePath(%q, %+v) = %+v, expected %+v", test.Path, test.I, got, test.Expected)
 		}
 	}
 }
