@@ -3,15 +3,17 @@ package diff
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 
 	myersdiff "github.com/mb0/diff"
 )
 
 type slice struct {
-	diffs []Differ
-	lhs   interface{}
-	rhs   interface{}
+	diffs   []Differ
+	indices []int
+	lhs     interface{}
+	rhs     interface{}
 }
 
 type sliceMissing struct {
@@ -40,8 +42,9 @@ func (d *diffData) Equal(i, j int) bool {
 	return diff.Diff() == Identical
 }
 
-func myersToDiff(conf config, lhs, rhs reflect.Value, changes []myersdiff.Change) []Differ {
+func myersToDiff(conf config, lhs, rhs reflect.Value, changes []myersdiff.Change) ([]Differ, []int) {
 	res := []Differ{}
+	indices := []int{}
 
 	lhsIdx := 0
 	rhsIdx := 0
@@ -49,30 +52,35 @@ func myersToDiff(conf config, lhs, rhs reflect.Value, changes []myersdiff.Change
 		for i := 0; lhsIdx+i < c.A; i++ {
 			diff, _ := diff(conf, lhs.Index(lhsIdx+i).Interface(), rhs.Index(rhsIdx+i).Interface(), &visited{})
 			res = append(res, diff)
+			indices = append(indices, lhsIdx+i)
 		}
 		lhsIdx = c.A
 		rhsIdx = c.B
 		for d := 0; d < c.Del; d++ {
 			res = append(res, sliceMissing{lhs.Index(lhsIdx + d).Interface()})
+			indices = append(indices, lhsIdx+d)
 		}
-		lhsIdx += c.Del
 		for i := 0; i < c.Ins; i++ {
 			res = append(res, sliceExcess{rhs.Index(rhsIdx + i).Interface()})
+			indices = append(indices, lhsIdx+i)
 		}
+		lhsIdx += c.Del
 		rhsIdx += c.Ins
 	}
 
 	for lhsIdx < lhs.Len() && rhsIdx < rhs.Len() {
 		diff, _ := diff(conf, lhs.Index(lhsIdx).Interface(), rhs.Index(rhsIdx).Interface(), &visited{})
 		res = append(res, diff)
+		indices = append(indices, lhsIdx)
 		lhsIdx++
 		rhsIdx++
 	}
-	return res
+	return res, indices
 }
 
 func newMyersSlice(c config, lhs, rhs interface{}, visited *visited) (Differ, error) {
 	var diffs []Differ
+	var indices []int
 
 	lhsVal := reflect.ValueOf(lhs)
 	rhsVal := reflect.ValueOf(rhs)
@@ -91,25 +99,28 @@ func newMyersSlice(c config, lhs, rhs interface{}, visited *visited) (Differ, er
 		}
 		myers := myersdiff.Diff(lhsVal.Len(), rhsVal.Len(), &dData)
 
-		diffs = myersToDiff(c, lhsVal, rhsVal, myers)
+		diffs, indices = myersToDiff(c, lhsVal, rhsVal, myers)
 		if dData.lastError != nil {
 			return slice{
-				lhs:   lhs,
-				rhs:   rhs,
-				diffs: diffs,
+				lhs:     lhs,
+				rhs:     rhs,
+				diffs:   diffs,
+				indices: indices,
 			}, dData.lastError
 		}
 	}
 
 	return slice{
-		lhs:   lhs,
-		rhs:   rhs,
-		diffs: diffs,
+		lhs:     lhs,
+		rhs:     rhs,
+		diffs:   diffs,
+		indices: indices,
 	}, nil
 }
 
 func newSlice(c config, lhs, rhs interface{}, visited *visited) (Differ, error) {
 	var diffs []Differ
+	var indices []int
 
 	lhsVal := reflect.ValueOf(lhs)
 	rhsVal := reflect.ValueOf(rhs)
@@ -126,15 +137,17 @@ func newSlice(c config, lhs, rhs interface{}, visited *visited) (Differ, error) 
 		}
 
 		for i := 0; i < nElems; i++ {
+			indices = append(indices, i)
 			if i < lhsVal.Len() && i < rhsVal.Len() {
 				diff, err := diff(c, lhsVal.Index(i).Interface(), rhsVal.Index(i).Interface(), visited)
 				diffs = append(diffs, diff)
 
 				if err != nil {
 					return slice{
-						lhs:   lhs,
-						rhs:   rhs,
-						diffs: diffs,
+						lhs:     lhs,
+						rhs:     rhs,
+						diffs:   diffs,
+						indices: indices,
 					}, err
 				}
 				continue
@@ -148,9 +161,10 @@ func newSlice(c config, lhs, rhs interface{}, visited *visited) (Differ, error) 
 	}
 
 	return slice{
-		lhs:   lhs,
-		rhs:   rhs,
-		diffs: diffs,
+		lhs:     lhs,
+		rhs:     rhs,
+		diffs:   diffs,
+		indices: indices,
 	}, nil
 }
 
@@ -213,10 +227,10 @@ func (s slice) StringIndent(key, prefix string, conf Output) string {
 	case Identical:
 		return " " + prefix + key + conf.white(s.lhs)
 	case TypesDiffer:
-		return "-" + prefix + key + conf.red(s.lhs) + "\n" +
+		return "-" + prefix + key + conf.red(s.lhs) + newLineSeparatorString(conf) +
 			"+" + prefix + key + conf.green(s.rhs)
 	case ContentDiffer:
-		var ss = []string{" " + prefix + key + conf.typ(s.lhs) + "["}
+		var ss = []string{}
 
 		for _, d := range s.diffs {
 			s := d.StringIndent("", prefix+conf.Indent, conf)
@@ -225,15 +239,29 @@ func (s slice) StringIndent(key, prefix string, conf Output) string {
 			}
 		}
 
-		return strings.Join(append(ss, " "+prefix+"]"), "\n")
+		return strings.Join(
+			[]string{
+				s.openString(key, prefix, conf),
+				strings.Join(ss, newLineSeparatorString(conf)),
+				" " + prefix + "]",
+			}, "\n",
+		)
 	}
 
 	return ""
 }
 
+func (s slice) openString(key, prefix string, conf Output) string {
+	if conf.JSON {
+		return " " + prefix + key + "["
+	}
+
+	return " " + prefix + key + conf.typ(s.lhs) + "["
+}
+
 func (s slice) Walk(path string, fn WalkFn) error {
 	for i, diff := range s.diffs {
-		d, err := walk(s, diff, path+"[]", fn)
+		d, err := walk(s, diff, path+"["+strconv.Itoa(s.lhsIndex(i))+"]", fn)
 		if err != nil {
 			return err
 		}
@@ -243,6 +271,10 @@ func (s slice) Walk(path string, fn WalkFn) error {
 	}
 
 	return nil
+}
+
+func (s slice) lhsIndex(i int) int {
+	return s.indices[i]
 }
 
 func (s slice) LHS() interface{} {

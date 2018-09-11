@@ -139,9 +139,10 @@ func TestTypeString(t *testing.T) {
 }
 
 type stringTest struct {
-	LHS  interface{}
-	RHS  interface{}
-	Want [][]string
+	LHS      interface{}
+	RHS      interface{}
+	Want     [][]string
+	WantJSON [][]string
 	Type
 }
 
@@ -151,6 +152,7 @@ const (
 )
 
 var testOutput = Output{ShowTypes: true}
+var testJSONOutput = Output{JSON: true}
 
 func TestTypes(t *testing.T) {
 	for _, test := range []stringTest{
@@ -171,7 +173,7 @@ func TestTypes(t *testing.T) {
 
 		ss := typ.Strings()
 		indented := typ.StringIndent(testKey, testPrefix, testOutput)
-		testStrings("TestTypes", t, test, ss, indented)
+		testStrings("TestTypes", t, test.Want, ss, indented)
 	}
 }
 
@@ -212,7 +214,7 @@ func TestScalar(t *testing.T) {
 
 		ss := typ.Strings()
 		indented := typ.StringIndent(testKey, testPrefix, testOutput)
-		testStrings("TestScalar", t, test, ss, indented)
+		testStrings("TestScalar", t, test.Want, ss, indented)
 	}
 }
 
@@ -224,6 +226,9 @@ func TestSlice(t *testing.T) {
 			Want: [][]string{
 				{"int", "1", "2"},
 			},
+			WantJSON: [][]string{
+				{"1", "2"},
+			},
 			Type: Identical,
 		},
 		{
@@ -232,6 +237,11 @@ func TestSlice(t *testing.T) {
 			Want: [][]string{
 				{},
 				{"-", "int", "1"},
+				{},
+			},
+			WantJSON: [][]string{
+				{},
+				{"-", "1"},
 				{},
 			},
 			Type: ContentDiffer,
@@ -244,6 +254,11 @@ func TestSlice(t *testing.T) {
 				{"+", "int", "2"},
 				{},
 			},
+			WantJSON: [][]string{
+				{},
+				{"+", "2"},
+				{},
+			},
 			Type: ContentDiffer,
 		},
 		{
@@ -252,6 +267,10 @@ func TestSlice(t *testing.T) {
 			Want: [][]string{
 				{"-", "int", "1", "2"},
 				{"+", "float64", "1.1", "2.1"},
+			},
+			WantJSON: [][]string{
+				{"-", "1", "2"},
+				{"+", "1.1", "2.1"},
 			},
 			Type: TypesDiffer,
 		},
@@ -263,6 +282,13 @@ func TestSlice(t *testing.T) {
 				{"int", "1"},
 				{"-", "int", "3"},
 				{"+", "int", "2"},
+				{},
+			},
+			WantJSON: [][]string{
+				{},
+				{"1"},
+				{"-", "3"},
+				{"+", "2"},
 				{},
 			},
 			Type: ContentDiffer,
@@ -280,7 +306,10 @@ func TestSlice(t *testing.T) {
 
 		ss := typ.Strings()
 		indented := typ.StringIndent(testKey, testPrefix, testOutput)
-		testStrings("TestSlice", t, test, ss, indented)
+		testStrings("TestSlice", t, test.Want, ss, indented)
+
+		indentedJSON := typ.StringIndent(testKey, testPrefix, testJSONOutput)
+		testStrings("TestSlice", t, test.WantJSON, ss, indentedJSON)
 	}
 
 	invalid, err := newSlice(defaultConfig(), nil, nil, &visited{})
@@ -387,7 +416,7 @@ func TestSliceMyers(t *testing.T) {
 
 		ss := typ.Strings()
 		indented := typ.StringIndent(testKey, testPrefix, testOutput)
-		testStrings("TestSlice", t, test, ss, indented)
+		testStrings("TestSlice", t, test.Want, ss, indented)
 	}
 
 	invalid, err := c.sliceFn(c, nil, nil, &visited{})
@@ -435,6 +464,9 @@ func TestMap(t *testing.T) {
 			Want: [][]string{
 				{"int", "1", "2", "3", "4"},
 			},
+			WantJSON: [][]string{
+				{"1", "2", "3", "4"},
+			},
 			Type: Identical,
 		},
 		{
@@ -442,7 +474,11 @@ func TestMap(t *testing.T) {
 			RHS: map[int]float64{1: 3.1},
 			Want: [][]string{
 				{"-", "int", "1", "2"},
-				{"+", "float64", "3", "4"},
+				{"+", "float64", "3"},
+			},
+			WantJSON: [][]string{
+				{"-", "1", "2"},
+				{"+", "3"},
 			},
 			Type: TypesDiffer,
 		},
@@ -453,6 +489,12 @@ func TestMap(t *testing.T) {
 				{},
 				{"-", "int", "1", "2"},
 				{"+", "int", "1", "3"},
+				{},
+			},
+			WantJSON: [][]string{
+				{},
+				{"-", "1", "2"},
+				{"+", "1", "3"},
 				{},
 			},
 			Type: ContentDiffer,
@@ -467,6 +509,13 @@ func TestMap(t *testing.T) {
 				{"int", "2", "3"},
 				{},
 			},
+			WantJSON: [][]string{
+				{},
+				{"-", "1", "2"},
+				{"+", "1", "3"},
+				{"2", "3"},
+				{},
+			},
 			Type: ContentDiffer,
 		},
 		{
@@ -477,6 +526,11 @@ func TestMap(t *testing.T) {
 				{"-", "int", "1", "2"},
 				{},
 			},
+			WantJSON: [][]string{
+				{},
+				{"-", "1", "2"},
+				{},
+			},
 			Type: ContentDiffer,
 		},
 		{
@@ -485,6 +539,11 @@ func TestMap(t *testing.T) {
 			Want: [][]string{
 				{},
 				{"+", "int", "1", "2"},
+				{},
+			},
+			WantJSON: [][]string{
+				{},
+				{"+", "1", "2"},
 				{},
 			},
 			Type: ContentDiffer,
@@ -502,7 +561,10 @@ func TestMap(t *testing.T) {
 
 		ss := m.Strings()
 		indented := m.StringIndent(testKey, testPrefix, testOutput)
-		testStrings(fmt.Sprintf("TestMap[%d]", i), t, test, ss, indented)
+		testStrings(fmt.Sprintf("TestMap[%d]", i), t, test.Want, ss, indented)
+
+		indentedJSON := m.StringIndent(testKey, testPrefix, testJSONOutput)
+		testStrings(fmt.Sprintf("TestMap[%d]", i), t, test.WantJSON, ss, indentedJSON)
 	}
 
 	invalid, err := newMap(defaultConfig(), nil, nil, &visited{})
@@ -697,7 +759,7 @@ func TestLHS(t *testing.T) {
 		t.Errorf("LHS(%+v): expected error to be of type %T, got %T instead", invalidLHSGetter, ErrLHSNotSupported{}, err)
 	}
 	if err.Error() == "" {
-		t.Errorf("LHS(%+v): unexpected empty error message")
+		t.Errorf("LHS(%+v): unexpected empty error message", invalidLHSGetter)
 	}
 }
 
@@ -781,7 +843,7 @@ func TestRHS(t *testing.T) {
 		t.Errorf("RHS(%+v): expected error to be of type %T, got %T instead", invalidRHSGetter, ErrLHSNotSupported{}, err)
 	}
 	if err.Error() == "" {
-		t.Errorf("RHS(%+v): unexpected empty error message")
+		t.Errorf("RHS(%+v): unexpected empty error message", invalidRHSGetter)
 	}
 }
 
@@ -825,8 +887,8 @@ func TestReport(t *testing.T) {
 	}
 }
 
-func testStrings(context string, t *testing.T, test stringTest, ss []string, indented string) {
-	for i, want := range test.Want {
+func testStrings(context string, t *testing.T, wants [][]string, ss []string, indented string) {
+	for i, want := range wants {
 		s := ss[i]
 
 		for i, needle := range want {
