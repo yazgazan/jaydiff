@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/yazgazan/jaydiff/diff"
+	"github.com/tomertwist/jaydiff/diff"
 )
 
 const (

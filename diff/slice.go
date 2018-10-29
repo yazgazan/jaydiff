@@ -3,8 +3,10 @@ package diff
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	myersdiff "github.com/mb0/diff"
 )
@@ -118,6 +120,67 @@ func newMyersSlice(c config, lhs, rhs interface{}, visited *visited) (Differ, er
 	}, nil
 }
 
+func genericCompare(e1, e2 interface{}) bool {
+	if e1 == nil || e2 == nil {
+		return true
+	}
+
+	switch e1.(type) {
+	case string:
+		es1 := e1.(string)
+		es2 := e2.(string)
+		// Date
+		d1, err1 := time.Parse(time.RFC3339, es1)
+		d2, err2 := time.Parse(time.RFC3339, es2)
+		if err1 == nil && err2 == nil {
+			return d1.Before(d2)
+		}
+		return es1 < es2
+	case int:
+		return e1.(int) < e2.(int)
+	}
+
+	return true
+}
+
+func sortSlice(i interface{}, keys []string) {
+	if keys == nil || len(keys) < 1 {
+		return
+	}
+	s, ok := i.([]interface{})
+	if !ok {
+		return
+	}
+	if len(s) == 0 {
+		return
+	}
+	eType := reflect.TypeOf(s[0]).Kind()
+	for _, elem := range s {
+		if eType != reflect.TypeOf(elem).Kind() {
+			return
+		}
+	}
+
+	sort.Slice(s[:], func(i, j int) bool {
+		switch reflect.ValueOf(s[i]).Interface().(type) {
+		case map[string]interface{}:
+			e1 := reflect.ValueOf(s[i]).Interface().(map[string]interface{})
+			e2 := reflect.ValueOf(s[j]).Interface().(map[string]interface{})
+			for _, k := range keys {
+				se1, ok1 := e1[k]
+				se2, ok2 := e2[k]
+				if ok1 && ok2 {
+					return genericCompare(se1, se2)
+				}
+			}
+		default:
+			return genericCompare(reflect.ValueOf(s[i]).Interface(), reflect.ValueOf(s[j]).Interface())
+		}
+
+		return true
+	})
+}
+
 func newSlice(c config, lhs, rhs interface{}, visited *visited) (Differ, error) {
 	var diffs []Differ
 	var indices []int
@@ -131,6 +194,11 @@ func newSlice(c config, lhs, rhs interface{}, visited *visited) (Differ, error) 
 			rhs: rhs,
 		}, err
 	} else if !typesDiffer {
+		if c.sortKeys != nil {
+			sortSlice(lhs, c.sortKeys)
+			sortSlice(rhs, c.sortKeys)
+		}
+
 		nElems := lhsVal.Len()
 		if rhsVal.Len() > nElems {
 			nElems = rhsVal.Len()

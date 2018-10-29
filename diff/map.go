@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/yazgazan/jaydiff/jpath"
+	"github.com/tomertwist/jaydiff/jpath"
 )
 
 type mapDiff struct {

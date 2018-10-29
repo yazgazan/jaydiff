@@ -2,7 +2,7 @@ package diff_test
 
 import (
 	"fmt"
-	"github.com/yazgazan/jaydiff/diff"
+	"github.com/tomertwist/jaydiff/diff"
 	"strings"
 )
 
