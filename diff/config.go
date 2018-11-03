@@ -1,7 +1,10 @@
 package diff
 
+import "strings"
+
 type config struct {
-	sliceFn diffFn
+	sliceFn  diffFn
+	sortKeys []string
 }
 
 // ConfigOpt is used to pass configuration options to the diff algorithm
@@ -17,6 +20,13 @@ func defaultConfig() config {
 func UseSliceMyers() ConfigOpt {
 	return func(c config) config {
 		c.sliceFn = newMyersSlice
+		return c
+	}
+}
+
+func AddSortingKeys(keys string) ConfigOpt {
+	return func(c config) config {
+		c.sortKeys = strings.Split(keys, ",")
 		return c
 	}
 }

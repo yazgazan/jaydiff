@@ -23,6 +23,7 @@ type config struct {
 	OutputReport  bool   `long:"report" short:"r" description:"output report format"`
 	UseSliceMyers bool   `long:"slice-myers" description:"use myers algorithm for slices"`
 	Version       func() `long:"version" short:"v" description:"print release version"`
+	SortingKeys   string `long:"keys" short:"k" description:"array sorting keys for default slice comparison (comma separated)"`
 }
 
 type output struct {
@@ -70,6 +71,9 @@ func (c config) Opts() []diff.ConfigOpt {
 
 	if c.UseSliceMyers {
 		opts = append(opts, diff.UseSliceMyers())
+	}
+	if len(c.SortingKeys) > 0 {
+		opts = append(opts, diff.AddSortingKeys(c.SortingKeys))
 	}
 
 	return opts
