@@ -83,14 +83,14 @@ func Split(path string) (head, tail string) {
 	if path[0] == '[' {
 		for i := 1; i < len(path); i++ {
 			if path[i] == ']' {
-				return path[0 : i+1], path[i+1 : len(path)]
+				return path[0 : i+1], path[i+1:]
 			}
 		}
 	}
 	// Skipping first character as we espect the path to start with a dot.
 	for i := 1; i < len(path); i++ {
 		if path[i] == '.' || path[i] == '[' {
-			return path[0:i], path[i:len(path)]
+			return path[0:i], path[i:]
 		}
 	}
 
@@ -126,46 +126,54 @@ func ExecutePath(path string, i interface{}) (interface{}, error) {
 	default:
 		return nil, ErrInvalidPath
 	case '[':
-		if v.Kind() != reflect.Slice {
-			return nil, ErrNotSlice
-		}
-		if v.IsNil() {
-			return nil, ErrNil
-		}
-		if head[len(head)-1] != ']' {
-			return nil, ErrInvalidPath
-		}
-		index, err := strconv.Atoi(head[1 : len(head)-1])
-		if err != nil {
-			return nil, err
-		}
-		if index >= v.Len() {
-			return nil, ErrOutOfBounds
-		}
-		val := v.Index(index)
-		if !val.CanInterface() {
-			return nil, ErrInvalidInterface
-		}
-		return ExecutePath(tail, val.Interface())
+		return executeSlice(head, tail, v)
 	case '.':
-		if v.Kind() != reflect.Map {
-			return nil, ErrNotMap
-		}
-		keyStr := head[1:len(head)]
-		if keyStr == "" {
-			return nil, ErrInvalidPath
-		}
-		key, err := getKey(keyStr, v.Type().Key().Kind())
-		if err != nil {
-			return nil, err
-		}
-		if v.IsNil() {
-			return nil, ErrNil
-		}
-		val := v.MapIndex(key)
-		if !val.CanInterface() {
-			return nil, ErrInvalidInterface
-		}
-		return ExecutePath(tail, val.Interface())
+		return executeMap(head, tail, v)
 	}
+}
+
+func executeSlice(head, tail string, v reflect.Value) (interface{}, error) {
+	if v.Kind() != reflect.Slice {
+		return nil, ErrNotSlice
+	}
+	if v.IsNil() {
+		return nil, ErrNil
+	}
+	if head[len(head)-1] != ']' {
+		return nil, ErrInvalidPath
+	}
+	index, err := strconv.Atoi(head[1 : len(head)-1])
+	if err != nil {
+		return nil, err
+	}
+	if index >= v.Len() {
+		return nil, ErrOutOfBounds
+	}
+	val := v.Index(index)
+	if !val.CanInterface() {
+		return nil, ErrInvalidInterface
+	}
+	return ExecutePath(tail, val.Interface())
+}
+
+func executeMap(head, tail string, v reflect.Value) (interface{}, error) {
+	if v.Kind() != reflect.Map {
+		return nil, ErrNotMap
+	}
+	keyStr := head[1:]
+	if keyStr == "" {
+		return nil, ErrInvalidPath
+	}
+	key, err := getKey(keyStr, v.Type().Key().Kind())
+	if err != nil {
+		return nil, err
+	}
+	if v.IsNil() {
+		return nil, ErrNil
+	}
+	val := v.MapIndex(key)
+	if !val.CanInterface() {
+		return nil, ErrInvalidInterface
+	}
+	return ExecutePath(tail, val.Interface())
 }
