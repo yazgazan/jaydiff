@@ -190,7 +190,7 @@ func (v *visited) add(lhs, rhs reflect.Value) error {
 		}
 		v.lhs = append(v.lhs, lhs.Pointer())
 	}
-	if canAddr(rhs) && !isEmptyMapOrSlice(lhs) {
+	if canAddr(rhs) && !isEmptyMapOrSlice(rhs) {
 		if inPointers(v.rhs, rhs) {
 			return ErrCyclic
 		}

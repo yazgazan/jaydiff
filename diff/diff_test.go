@@ -616,6 +616,9 @@ func TestCircular(t *testing.T) {
 				0: "foo",
 			},
 		},
+		1: []interface{}{
+			"bar", "baz",
+		},
 	}
 	emptySlice := map[int]interface{}{
 		0: []interface{}{},
@@ -644,6 +647,8 @@ func TestCircular(t *testing.T) {
 		{lhs: first, rhs: second, wantError: true},
 		{lhs: first, rhs: notCyclic, wantError: true},
 		{lhs: notCyclic, rhs: first, wantError: true},
+		{lhs: notCyclic, rhs: emptySlice, wantError: false},
+		{lhs: notCyclic, rhs: emptyMap, wantError: false},
 		{lhs: notCyclic, rhs: notCyclic},
 		{lhs: emptySlice, rhs: emptySliceNotRepeating},
 		{lhs: emptySliceNotRepeating, rhs: emptySlice},
