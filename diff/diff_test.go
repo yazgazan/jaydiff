@@ -644,7 +644,6 @@ func TestCircular(t *testing.T) {
 	}{
 		{lhs: first, rhs: first, wantError: true},
 		{lhs: first, rhs: second, wantError: true},
-		{lhs: first, rhs: second, wantError: true},
 		{lhs: first, rhs: notCyclic, wantError: true},
 		{lhs: notCyclic, rhs: first, wantError: true},
 		{lhs: notCyclic, rhs: emptySlice, wantError: false},
