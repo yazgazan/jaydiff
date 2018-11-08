@@ -616,6 +616,9 @@ func TestCircular(t *testing.T) {
 				0: "foo",
 			},
 		},
+		1: []interface{}{
+			"bar", "baz",
+		},
 	}
 	emptySlice := map[int]interface{}{
 		0: []interface{}{},
@@ -634,6 +637,11 @@ func TestCircular(t *testing.T) {
 		1: map[int]interface{}{},
 	}
 
+	repeatingNotCyclic := map[int]interface{}{
+		0: []interface{}{"foo", "bar"},
+	}
+	repeatingNotCyclic[1] = repeatingNotCyclic[0]
+
 	for _, test := range []struct {
 		lhs       interface{}
 		rhs       interface{}
@@ -641,14 +649,20 @@ func TestCircular(t *testing.T) {
 	}{
 		{lhs: first, rhs: first, wantError: true},
 		{lhs: first, rhs: second, wantError: true},
-		{lhs: first, rhs: second, wantError: true},
 		{lhs: first, rhs: notCyclic, wantError: true},
 		{lhs: notCyclic, rhs: first, wantError: true},
+		{lhs: notCyclic, rhs: emptySlice},
+		{lhs: notCyclic, rhs: emptyMap},
 		{lhs: notCyclic, rhs: notCyclic},
 		{lhs: emptySlice, rhs: emptySliceNotRepeating},
 		{lhs: emptySliceNotRepeating, rhs: emptySlice},
 		{lhs: emptyMap, rhs: emptyMapNotRepeating},
 		{lhs: emptyMapNotRepeating, rhs: emptyMap},
+
+		// Known limitation: our circular reference detection can
+		// give false-positive when an addressable value is repeated
+		// in a non-circular pattern.
+		{lhs: notCyclic, rhs: repeatingNotCyclic, wantError: true},
 	} {
 		d, err := Diff(test.lhs, test.rhs)
 
