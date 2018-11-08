@@ -94,9 +94,9 @@ Report format:
 ```diff
 $ jaydiff --report --show-types old.json new.json
 
-- .b[]: float64 3
-+ .b[]: float64 5
-+ .b[]: float64 4
+- .b[1]: float64 3
++ .b[1]: float64 5
++ .b[2]: float64 4
 - .c.a: string toto
 + .c.a: string titi
 - .c.b: float64 23
@@ -137,8 +137,8 @@ Ignore Excess values (useful when checking for backward compatibility):
 ```diff
 $ jaydiff --report --show-types --ignore-excess old.json new.json
 
-- .b[]: float64 3
-+ .b[]: float64 5
+- .b[1]: float64 3
++ .b[1]: float64 5
 - .c.a: string toto
 + .c.a: string titi
 - .c.b: float64 23

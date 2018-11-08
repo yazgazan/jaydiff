@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/gobwas/glob"
+	"github.com/yazgazan/jaydiff/jpath"
 )
 
 type ignorePattern struct {
@@ -25,6 +26,7 @@ func (p *ignorePatterns) UnmarshalFlag(s string) error {
 }
 
 func (p ignorePatterns) Match(s string) bool {
+	s = jpath.StripIndices(s)
 	for _, pattern := range p {
 		if pattern.Match(s) {
 			return true
