@@ -43,8 +43,8 @@ fi
 
 echo 'Installing dependencies ...'
 # Dependencies
-go get -u github.com/c4milo/github-release
-go get -u github.com/mitchellh/gox
+GO111MODULE=off go get -u github.com/c4milo/github-release
+GO111MODULE=off go get -u github.com/mitchellh/gox
 
 # Cleanup
 rm -rf build dist && mkdir -p build dist
