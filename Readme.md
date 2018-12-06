@@ -7,6 +7,8 @@
 
 A JSON diff utility.
 
+Sponsored by [Datumprikker.nl ![datumprikker.nl](https://dowwuuw231t65.cloudfront.net/img/logo_d.png)](https://datumprikker.nl)
+
 # Install
 
 ## Downloading the compiled binary
@@ -162,6 +164,3 @@ $ jaydiff --report --show-types --ignore-excess --ignore-values old.json new.jso
 
 - JayPatch
 - Have the diff lib support more types (Structs, interfaces (?), Arrays, ...)
-
-
-Sponsored by [Datumprikker.nl ![datumprikker.nl](https://dowwuuw231t65.cloudfront.net/img/logo_d.png)](https://datumprikker.nl)
