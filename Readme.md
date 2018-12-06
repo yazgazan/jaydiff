@@ -162,3 +162,5 @@ $ jaydiff --report --show-types --ignore-excess --ignore-values old.json new.jso
 
 - JayPatch
 - Have the diff lib support more types (Structs, interfaces (?), Arrays, ...)
+
+Sponsored by [Datumprikker.nl](https://datumprikker.nl)

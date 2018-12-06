@@ -1,7 +1,6 @@
 package diff
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 )
@@ -44,6 +43,3 @@ type ErrRHSNotSupported struct {
 func (e ErrRHSNotSupported) Error() string {
 	return fmt.Sprintf("%T does not contain an RHS value", e.Diff)
 }
-
-// ErrCyclic is returned when one of the compared values contain circular references
-var ErrCyclic = errors.New("circular references not supported")
