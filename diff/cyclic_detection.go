@@ -15,10 +15,10 @@ type visited struct {
 	rhs []uintptr
 }
 
-// add will try to add the value's pointers to the list. It will return an error
+// push will try to add the value's pointers to the list. It will return an error
 // if the value is already in the list.
 // visited.remove should be called whether an error occured or not.
-func (v *visited) add(lhs, rhs reflect.Value) error {
+func (v *visited) push(lhs, rhs reflect.Value) error {
 	if canAddr(lhs) && !isEmptyMapOrSlice(lhs) {
 		if inPointers(v.lhs, lhs.Pointer()) {
 			return ErrCyclic
@@ -35,22 +35,22 @@ func (v *visited) add(lhs, rhs reflect.Value) error {
 	return nil
 }
 
-func (v *visited) remove(lhs, rhs reflect.Value) {
-	if canAddr(lhs) && isLastPointer(v.lhs, lhs.Pointer()) {
+func (v *visited) pop(lhs, rhs reflect.Value) {
+	if canAddr(lhs) && lastElementEquals(v.lhs, lhs.Pointer()) {
 		v.lhs = v.lhs[:len(v.lhs)-1]
 	}
 
-	if canAddr(rhs) && isLastPointer(v.rhs, rhs.Pointer()) {
+	if canAddr(rhs) && lastElementEquals(v.rhs, rhs.Pointer()) {
 		v.rhs = v.rhs[:len(v.rhs)-1]
 	}
 }
 
-func isLastPointer(pointers []uintptr, val uintptr) bool {
-	if len(pointers) == 0 {
+func lastElementEquals(uu []uintptr, val uintptr) bool {
+	if len(uu) == 0 {
 		return false
 	}
 
-	return pointers[len(pointers)-1] == val
+	return uu[len(uu)-1] == val
 }
 
 func isEmptyMapOrSlice(v reflect.Value) bool {

@@ -50,8 +50,8 @@ func diff(c config, lhs, rhs interface{}, visited *visited) (Differ, error) {
 		return d, nil
 	}
 
-	err := visited.add(lhsVal, rhsVal)
-	defer visited.remove(lhsVal, rhsVal)
+	err := visited.push(lhsVal, rhsVal)
+	defer visited.pop(lhsVal, rhsVal)
 	if err != nil {
 		return types{lhs, rhs}, ErrCyclic
 	}
