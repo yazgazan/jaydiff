@@ -7,21 +7,21 @@
 
 A JSON diff utility.
 
-# Install
+## Install
 
-## Downloading the compiled binary
+### Downloading the compiled binary
 
 - Download the latest version of the binary: [releases](https://github.com/yazgazan/jaydiff/releases)
 - extract the archive and place the `jaydiff` binary in your `$PATH`
 
-## From source
+### From source
 
 - Have go 1.10 or greater installed: [golang.org](https://golang.org/doc/install)
 - run `go get -u github.com/yazgazan/jaydiff`
 
-# Usage
+## Usage
 
-```
+```text
 Usage:
   jaydiff [OPTIONS] FILE_1 FILE_2
 
@@ -40,7 +40,7 @@ Help Options:
   -h, --help           Show this help message
 ```
 
-## Examples
+### Examples
 
 Getting a full diff of two json files:
 
@@ -72,8 +72,8 @@ Ignoring fields:
 
 ```diff
 $ jaydiff --show-types \
-	  --ignore='.b\[\]' --ignore='.d' --ignore='.c.[ac]' \
-	    old.json new.json
+    --ignore='.b\[\]' --ignore='.d' --ignore='.c.[ac]' \
+      old.json new.json
 
  map[string]interface {} map[
      a: float64 42
@@ -158,9 +158,8 @@ $ jaydiff --report --show-types --ignore-excess --ignore-values old.json new.jso
 - .f: float64 42
 ```
 
-# Ideas
+## Ideas
 
 - JayPatch
-- Have the diff lib support more types (Structs, interfaces (?), Arrays, ...)
 
 Sponsored by [Datumprikker.nl](https://datumprikker.nl)
