@@ -19,12 +19,13 @@ type Output struct {
 func (o Output) red(v interface{}) string {
 	var s string
 
-	if o.ShowTypes {
-		s = fmt.Sprintf("%T %v", v, v)
-	} else if o.JSONValues {
-		s = jsonString(v)
-	} else {
+	switch {
+	default:
 		s = fmt.Sprintf("%v", v)
+	case o.ShowTypes:
+		s = fmt.Sprintf("%T %v", v, v)
+	case o.JSONValues:
+		s = jsonString(v)
 	}
 
 	if !o.Colorized {
@@ -37,12 +38,13 @@ func (o Output) red(v interface{}) string {
 func (o Output) green(v interface{}) string {
 	var s string
 
-	if o.ShowTypes {
-		s = fmt.Sprintf("%T %v", v, v)
-	} else if o.JSONValues {
-		s = jsonString(v)
-	} else {
+	switch {
+	default:
 		s = fmt.Sprintf("%v", v)
+	case o.ShowTypes:
+		s = fmt.Sprintf("%T %v", v, v)
+	case o.JSONValues:
+		s = jsonString(v)
 	}
 
 	if !o.Colorized {
@@ -55,12 +57,13 @@ func (o Output) green(v interface{}) string {
 func (o Output) white(v interface{}) string {
 	var s string
 
-	if o.ShowTypes {
-		s = fmt.Sprintf("%T %v", v, v)
-	} else if o.JSONValues {
-		s = jsonString(v)
-	} else {
+	switch {
+	default:
 		s = fmt.Sprintf("%v", v)
+	case o.ShowTypes:
+		s = fmt.Sprintf("%T %v", v, v)
+	case o.JSONValues:
+		s = jsonString(v)
 	}
 
 	return s
