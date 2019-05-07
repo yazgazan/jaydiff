@@ -56,21 +56,31 @@ func diff(c config, lhs, rhs interface{}, visited *visited) (Differ, error) {
 		return types{lhs, rhs}, ErrCyclic
 	}
 
-	if lhsVal.Type().Comparable() && rhsVal.Type().Comparable() {
+	if areScalars(lhsVal, rhsVal) {
 		return scalar{lhs, rhs}, nil
 	}
 	if lhsVal.Kind() != rhsVal.Kind() {
 		return types{lhs, rhs}, nil
 	}
 
-	if lhsVal.Kind() == reflect.Slice {
+	switch lhsVal.Kind() {
+	case reflect.Slice:
 		return c.sliceFn(c, lhs, rhs, visited)
-	}
-	if lhsVal.Kind() == reflect.Map {
+	case reflect.Map:
 		return newMap(c, lhs, rhs, visited)
+	case reflect.Struct:
+		return newStruct(c, lhs, rhs, visited)
 	}
 
 	return types{lhs, rhs}, &ErrUnsupported{lhsVal.Type(), rhsVal.Type()}
+}
+
+func areScalars(lhs, rhs reflect.Value) bool {
+	if lhs.Kind() == reflect.Struct || rhs.Kind() == reflect.Struct {
+		return false
+	}
+
+	return lhs.Type().Comparable() && rhs.Type().Comparable()
 }
 
 func nilCheck(lhs, rhs interface{}) (Differ, bool) {

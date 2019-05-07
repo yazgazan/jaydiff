@@ -121,7 +121,7 @@ func (m mapDiff) Strings() []string {
 		}
 	case ContentDiffer:
 		var ss = []string{"{"}
-		var keys []interface{}
+		keys := make([]interface{}, 0, len(m.diffs))
 
 		for key := range m.diffs {
 			keys = append(keys, key)
@@ -153,7 +153,7 @@ func (m mapDiff) StringIndent(keyprefix, prefix string, conf Output) string {
 			"+" + prefix + keyprefix + conf.green(m.rhs)
 	case ContentDiffer:
 		var ss = []string{}
-		var keys []interface{}
+		keys := make([]interface{}, 0, len(m.diffs))
 
 		for key := range m.diffs {
 			keys = append(keys, key)
