@@ -17,7 +17,7 @@ type visited struct {
 
 // push will try to add the value's pointers to the list. It will return an error
 // if the value is already in the list.
-// visited.remove should be called whether an error occured or not.
+// visited.remove should be called whether an error occurred or not.
 func (v *visited) push(lhs, rhs reflect.Value) error {
 	if canAddr(lhs) && !isEmptyMapOrSlice(lhs) {
 		if inPointers(v.lhs, lhs.Pointer()) {

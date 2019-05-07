@@ -206,7 +206,7 @@ func (m mapDiff) mapKeyString(key interface{}, conf Output) string {
 }
 
 func (m mapDiff) Walk(path string, fn WalkFn) error {
-	var keys []interface{}
+	keys := make([]interface{}, 0, len(m.diffs))
 
 	for k := range m.diffs {
 		keys = append(keys, k)
