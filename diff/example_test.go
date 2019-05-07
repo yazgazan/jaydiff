@@ -48,6 +48,7 @@ func ExampleDiff_struct() {
 		Foo int
 		Bar string
 		Baz subStruct
+		Ban [2]int
 
 		priv int
 	}
@@ -55,6 +56,7 @@ func ExampleDiff_struct() {
 		Foo int
 		Bar string
 		Baz subStruct
+		Ban [2]int
 
 		priv int
 	}
@@ -66,6 +68,7 @@ func ExampleDiff_struct() {
 			Hello: 11,
 			World: 3.5,
 		},
+		Ban:  [2]int{3, 5},
 		priv: 0,
 	}
 	rhs := structB{
@@ -75,6 +78,7 @@ func ExampleDiff_struct() {
 			Hello: 11,
 			World: 3.5,
 		},
+		Ban:  [2]int{3, 7},
 		priv: 1,
 	}
 
@@ -91,6 +95,11 @@ func ExampleDiff_struct() {
 
 	// Output:
 	// diff_test.structA map[
+	//    Ban: [2]int [
+	//      int 3
+	// -    int 5
+	// +    int 7
+	//    ]
 	//    Bar: string hello
 	//    Baz: diff_test.subStruct {11 3.5}
 	// -  Foo: int 42

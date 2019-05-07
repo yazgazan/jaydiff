@@ -64,7 +64,7 @@ func diff(c config, lhs, rhs interface{}, visited *visited) (Differ, error) {
 	}
 
 	switch lhsVal.Kind() {
-	case reflect.Slice:
+	case reflect.Slice, reflect.Array:
 		return c.sliceFn(c, lhs, rhs, visited)
 	case reflect.Map:
 		return newMap(c, lhs, rhs, visited)
@@ -77,6 +77,9 @@ func diff(c config, lhs, rhs interface{}, visited *visited) (Differ, error) {
 
 func areScalars(lhs, rhs reflect.Value) bool {
 	if lhs.Kind() == reflect.Struct || rhs.Kind() == reflect.Struct {
+		return false
+	}
+	if lhs.Kind() == reflect.Array || rhs.Kind() == reflect.Array {
 		return false
 	}
 
