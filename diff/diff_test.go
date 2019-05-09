@@ -2,6 +2,7 @@ package diff
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -1126,5 +1127,34 @@ func TestIsSlice(t *testing.T) {
 	}
 	if !IsSlice(d) {
 		t.Error("IsSlice(Diff(map{...}, map{...})) = false, expected true")
+	}
+}
+
+func TestValueIsScalar(t *testing.T) {
+	for _, test := range []struct {
+		In       interface{}
+		Expected bool
+	}{
+		{int(42), true},
+		{int8(23), true},
+		{"foo", true},
+		{true, true},
+		{float32(1.2), true},
+		{complex(5, -3), true},
+
+		{[]byte("foo"), false},
+		{struct{}{}, false},
+		{&struct{}{}, false},
+		{[]int{1, 2, 3}, false},
+		{[3]int{1, 2, 3}, false},
+		{map[string]int{"foo": 22}, false},
+		{func() {}, false},
+		{make(chan struct{}), false},
+	} {
+		v := reflect.ValueOf(test.In)
+		got := valueIsScalar(v)
+		if got != test.Expected {
+			t.Errorf("valueIsScalar(%T) = %v, expected %v", test.In, got, test.Expected)
+		}
 	}
 }
