@@ -56,7 +56,7 @@ func diff(c config, lhs, rhs interface{}, visited *visited) (Differ, error) {
 		return types{lhs, rhs}, ErrCyclic
 	}
 
-	if areScalars(lhsVal, rhsVal) {
+	if valuesAreScalar(lhsVal, rhsVal) {
 		return scalar{lhs, rhs}, nil
 	}
 	if lhsVal.Kind() != rhsVal.Kind() {
@@ -75,7 +75,7 @@ func diff(c config, lhs, rhs interface{}, visited *visited) (Differ, error) {
 	return types{lhs, rhs}, &ErrUnsupported{lhsVal.Type(), rhsVal.Type()}
 }
 
-func areScalars(lhs, rhs reflect.Value) bool {
+func valuesAreScalar(lhs, rhs reflect.Value) bool {
 	if lhs.Kind() == reflect.Struct || rhs.Kind() == reflect.Struct {
 		return false
 	}
