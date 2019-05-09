@@ -221,6 +221,32 @@ func TestScalar(t *testing.T) {
 			},
 			Type: TypesDiffer,
 		},
+		{
+			LHS: complex(4, -3),
+			RHS: complex(4, -3),
+			Want: [][]string{
+				{"complex128", "4", "-3"},
+			},
+			Type: Identical,
+		},
+		{
+			LHS: complex(4, -3),
+			RHS: complex(-7, 32),
+			Want: [][]string{
+				{"complex128", "4", "-3"},
+				{"complex128", "-7", "32"},
+			},
+			Type: ContentDiffer,
+		},
+		{
+			LHS: 2.1,
+			RHS: complex(4, -3),
+			Want: [][]string{
+				{"float64", "2.1"},
+				{"complex128", "4", "-3"},
+			},
+			Type: TypesDiffer,
+		},
 	} {
 		typ := scalar{test.LHS, test.RHS}
 
