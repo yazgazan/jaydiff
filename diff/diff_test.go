@@ -2,6 +2,7 @@ package diff
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -57,6 +58,21 @@ func TestDiff(t *testing.T) {
 		{LHS: []interface{}(nil), RHS: []interface{}{1, 2, 3.3}, Want: ContentDiffer},
 		{LHS: []int(nil), RHS: []int{}, Want: Identical},
 		{LHS: func() {}, RHS: func() {}, Want: TypesDiffer, Error: true},
+		{
+			LHS:  struct{}{},
+			RHS:  struct{}{},
+			Want: Identical,
+		},
+		{
+			LHS:  struct{ Foo int }{Foo: 42},
+			RHS:  struct{ Foo int }{Foo: 21},
+			Want: ContentDiffer,
+		},
+		{
+			LHS:  struct{ Foo int }{Foo: 42},
+			RHS:  struct{ Bar int }{Bar: 42},
+			Want: TypesDiffer,
+		},
 	} {
 		diff, err := Diff(test.LHS, test.RHS)
 
@@ -202,6 +218,32 @@ func TestScalar(t *testing.T) {
 			Want: [][]string{
 				{"int", "4"},
 				{"float64", "2.1"},
+			},
+			Type: TypesDiffer,
+		},
+		{
+			LHS: complex(4, -3),
+			RHS: complex(4, -3),
+			Want: [][]string{
+				{"complex128", "4", "-3"},
+			},
+			Type: Identical,
+		},
+		{
+			LHS: complex(4, -3),
+			RHS: complex(-7, 32),
+			Want: [][]string{
+				{"complex128", "4", "-3"},
+				{"complex128", "-7", "32"},
+			},
+			Type: ContentDiffer,
+		},
+		{
+			LHS: 2.1,
+			RHS: complex(4, -3),
+			Want: [][]string{
+				{"float64", "2.1"},
+				{"complex128", "4", "-3"},
 			},
 			Type: TypesDiffer,
 		},
@@ -552,7 +594,7 @@ func TestMap(t *testing.T) {
 		m, err := newMap(defaultConfig(), test.LHS, test.RHS, &visited{})
 
 		if err != nil {
-			t.Errorf("NewMap(%+v, %+v): unexpected error: %q", test.LHS, test.RHS, err)
+			t.Errorf("newMap(%+v, %+v): unexpected error: %q", test.LHS, test.RHS, err)
 			continue
 		}
 		if m.Diff() != test.Type {
@@ -570,10 +612,10 @@ func TestMap(t *testing.T) {
 	invalid, err := newMap(defaultConfig(), nil, nil, &visited{})
 	if invalidErr, ok := err.(errInvalidType); ok {
 		if !strings.Contains(invalidErr.Error(), "nil") {
-			t.Errorf("NewMap(nil, nil): unexpected format for InvalidType error: got %s", err)
+			t.Errorf("newMap(nil, nil): unexpected format for InvalidType error: got %s", err)
 		}
 	} else {
-		t.Errorf("NewMap(nil, nil): expected InvalidType error, got %s", err)
+		t.Errorf("newMap(nil, nil): expected InvalidType error, got %s", err)
 	}
 	ss := invalid.Strings()
 	if len(ss) != 0 {
@@ -601,6 +643,197 @@ func TestMap(t *testing.T) {
 	indented = invalid.StringIndent(testKey, testPrefix, testOutput)
 	if indented != "" {
 		t.Errorf("invalidMap.StringIndent(%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
+	}
+}
+
+type emptyStruct struct{}
+type subStruct struct {
+	A int
+}
+type structA struct {
+	Foo int
+	Bar subStruct
+	baz float64
+}
+type structB struct {
+	Foo int
+	Bar subStruct
+	baz float64
+}
+type structC struct {
+	Foo []int
+}
+type structInvalid struct {
+	A func()
+}
+
+func TestTypeStruct(t *testing.T) {
+	for i, test := range []stringTest{
+		{
+			LHS: emptyStruct{},
+			RHS: emptyStruct{},
+			Want: [][]string{
+				{"emptyStruct", "{}"},
+			},
+			WantJSON: [][]string{
+				{"{}"},
+			},
+			Type: Identical,
+		},
+		{
+			LHS: structA{
+				Foo: 42,
+				Bar: subStruct{
+					A: 2,
+				},
+				baz: 4.2,
+			},
+			RHS: structA{
+				Foo: 42,
+				Bar: subStruct{
+					A: 2,
+				},
+				baz: 1.1,
+			},
+			Want: [][]string{
+				{"structA", "42", "{2}", "4.2"},
+			},
+			WantJSON: [][]string{
+				{"42", "{2}", "4.2"},
+			},
+			Type: Identical,
+		},
+		{
+			LHS: structA{
+				Foo: 42,
+				Bar: subStruct{
+					A: 2,
+				},
+				baz: 4.2,
+			},
+			RHS: structB{
+				Foo: 42,
+				Bar: subStruct{
+					A: 2,
+				},
+				baz: 1.1,
+			},
+			Want: [][]string{
+				{"structA", "42", "{2}", "4.2"},
+			},
+			WantJSON: [][]string{
+				{"42", "{2}", "4.2"},
+			},
+			Type: Identical,
+		},
+		{
+			LHS: structA{
+				Foo: 42,
+				Bar: subStruct{
+					A: 2,
+				},
+				baz: 4.2,
+			},
+			RHS: structB{
+				Foo: 23,
+				Bar: subStruct{
+					A: 2,
+				},
+				baz: 1.1,
+			},
+			Want: [][]string{
+				{},
+				{"Bar"},
+				{"Foo", "-", "int", "42"},
+				{"Foo", "+", "int", "23"},
+				{},
+			},
+			WantJSON: [][]string{
+				{},
+				{"Bar"},
+				{"Foo", "-", "42"},
+				{"Foo", "+", "23"},
+				{},
+			},
+			Type: ContentDiffer,
+		},
+		{
+			LHS: structA{
+				Foo: 42,
+				Bar: subStruct{
+					A: 2,
+				},
+				baz: 4.2,
+			},
+			RHS: structC{
+				Foo: []int{1, 2},
+			},
+			Want: [][]string{
+				{"-", "structA", "42", "{2}", "4.2"},
+				{"+", "structC", "[1 2]"},
+			},
+			WantJSON: [][]string{
+				{"-", "42", "{2}", "4.2"},
+				{"+", "{[1 2]}"},
+			},
+			Type: TypesDiffer,
+		},
+	} {
+		s, err := newStruct(defaultConfig(), test.LHS, test.RHS, &visited{})
+
+		if err != nil {
+			t.Errorf("newStruct(%+v, %+v): unexpected error: %q", test.LHS, test.RHS, err)
+			continue
+		}
+		if s.Diff() != test.Type {
+			t.Errorf("Types.Diff() = %q, expected %q", s.Diff(), test.Type)
+		}
+
+		ss := s.Strings()
+		indented := s.StringIndent(testKey, testPrefix, testOutput)
+		testStrings(fmt.Sprintf("TestMap[%d]", i), t, test.Want, ss, indented)
+
+		indentedJSON := s.StringIndent(testKey, testPrefix, testJSONOutput)
+		testStrings(fmt.Sprintf("TestMap[%d]", i), t, test.WantJSON, ss, indentedJSON)
+	}
+
+	invalid, err := newStruct(defaultConfig(), nil, nil, &visited{})
+	if invalidErr, ok := err.(errInvalidType); ok {
+		if !strings.Contains(invalidErr.Error(), "nil") {
+			t.Errorf("newStruct(nil, nil): unexpected format for InvalidType error: got %s", err)
+		}
+	} else {
+		t.Errorf("newStruct(nil, nil): expected InvalidType error, got %s", err)
+	}
+	ss := invalid.Strings()
+	if len(ss) != 0 {
+		t.Errorf("len(invalidStruct.Strings()) = %d, expected 0", len(ss))
+	}
+	indented := invalid.StringIndent(testKey, testPrefix, testOutput)
+	if indented != "" {
+		t.Errorf("invalidStruct.StringIndent(%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
+	}
+
+	invalid, err = newStruct(defaultConfig(), structA{}, nil, &visited{})
+	if invalidErr, ok := err.(errInvalidType); ok {
+		if !strings.Contains(invalidErr.Error(), "nil") {
+			t.Errorf("newStruct(structA{}, nil): unexpected format for InvalidType error: got %s", err)
+		}
+	} else {
+		t.Errorf("newStruct(structA{}, nil): expected InvalidType error, got %s", err)
+	}
+	ss = invalid.Strings()
+	if len(ss) != 0 {
+		t.Errorf("len(invalidStruct.Strings()) = %d, expected 0", len(ss))
+	}
+	indented = invalid.StringIndent(testKey, testPrefix, testOutput)
+	if indented != "" {
+		t.Errorf("invalidStruct.StringIndent(%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
+	}
+
+	invalid, err = newStruct(defaultConfig(), structInvalid{}, structInvalid{}, &visited{})
+	if err == nil {
+		t.Errorf("newStruct(structInvalid{}, structInvalid{}): expected error, got nil")
 	}
 }
 
@@ -641,6 +874,18 @@ func TestLHS(t *testing.T) {
 	}
 	if i, ok := v.(int); !ok || i != 42 {
 		t.Errorf("LHS(%+v) = %v, expected %d", validLHSMapGetter, v, 42)
+	}
+
+	validLHSStructGetter := Differ(&structDiff{
+		lhs: structA{Foo: 42},
+		rhs: structB{Foo: 23},
+	})
+	v, err = LHS(validLHSStructGetter)
+	if err != nil {
+		t.Errorf("LHS(%+v): unexpected error: %s", validLHSStructGetter, err)
+	}
+	if s, ok := v.(structA); !ok || s.Foo != 42 {
+		t.Errorf("LHS(%+v).Foo = %v, expected %d", validLHSStructGetter, s.Foo, 42)
 	}
 
 	validLHSSliceGetter := Differ(&slice{
@@ -725,6 +970,18 @@ func TestRHS(t *testing.T) {
 	}
 	if s, ok := v.(string); !ok || s != "hello" {
 		t.Errorf("RHS(%+v) = %v, expected %q", validRHSMapGetter, v, "hello")
+	}
+
+	validRHSStructGetter := Differ(&structDiff{
+		lhs: structA{Foo: 42},
+		rhs: structB{Foo: 23},
+	})
+	v, err = RHS(validRHSStructGetter)
+	if err != nil {
+		t.Errorf("RHS(%+v): unexpected error: %s", validRHSStructGetter, err)
+	}
+	if s, ok := v.(structB); !ok || s.Foo != 23 {
+		t.Errorf("RHS(%+v).Foo = %v, expected %d", validRHSStructGetter, s.Foo, 23)
 	}
 
 	validRHSSliceGetter := Differ(&slice{
@@ -896,5 +1153,34 @@ func TestIsSlice(t *testing.T) {
 	}
 	if !IsSlice(d) {
 		t.Error("IsSlice(Diff(map{...}, map{...})) = false, expected true")
+	}
+}
+
+func TestValueIsScalar(t *testing.T) {
+	for _, test := range []struct {
+		In       interface{}
+		Expected bool
+	}{
+		{int(42), true},
+		{int8(23), true},
+		{"foo", true},
+		{true, true},
+		{float32(1.2), true},
+		{complex(5, -3), true},
+
+		{[]byte("foo"), false},
+		{struct{}{}, false},
+		{&struct{}{}, false},
+		{[]int{1, 2, 3}, false},
+		{[3]int{1, 2, 3}, false},
+		{map[string]int{"foo": 22}, false},
+		{func() {}, false},
+		{make(chan struct{}), false},
+	} {
+		v := reflect.ValueOf(test.In)
+		got := valueIsScalar(v)
+		if got != test.Expected {
+			t.Errorf("valueIsScalar(%T) = %v, expected %v", test.In, got, test.Expected)
+		}
 	}
 }

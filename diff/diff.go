@@ -43,8 +43,8 @@ func Diff(lhs, rhs interface{}, opts ...ConfigOpt) (Differ, error) {
 }
 
 func diff(c config, lhs, rhs interface{}, visited *visited) (Differ, error) {
-	lhsVal := reflect.ValueOf(lhs)
-	rhsVal := reflect.ValueOf(rhs)
+	lhsVal, lhs := indirectValueOf(lhs)
+	rhsVal, rhs := indirectValueOf(rhs)
 
 	if d, ok := nilCheck(lhs, rhs); ok {
 		return d, nil
@@ -56,21 +56,41 @@ func diff(c config, lhs, rhs interface{}, visited *visited) (Differ, error) {
 		return types{lhs, rhs}, ErrCyclic
 	}
 
-	if lhsVal.Type().Comparable() && rhsVal.Type().Comparable() {
+	if valueIsScalar(lhsVal) && valueIsScalar(rhsVal) {
 		return scalar{lhs, rhs}, nil
 	}
 	if lhsVal.Kind() != rhsVal.Kind() {
 		return types{lhs, rhs}, nil
 	}
 
-	if lhsVal.Kind() == reflect.Slice {
+	switch lhsVal.Kind() {
+	case reflect.Slice, reflect.Array:
 		return c.sliceFn(c, lhs, rhs, visited)
-	}
-	if lhsVal.Kind() == reflect.Map {
+	case reflect.Map:
 		return newMap(c, lhs, rhs, visited)
+	case reflect.Struct:
+		return newStruct(c, lhs, rhs, visited)
 	}
 
 	return types{lhs, rhs}, &ErrUnsupported{lhsVal.Type(), rhsVal.Type()}
+}
+
+func indirectValueOf(i interface{}) (reflect.Value, interface{}) {
+	v := reflect.Indirect(reflect.ValueOf(i))
+	if !v.IsValid() || !v.CanInterface() {
+		return reflect.ValueOf(i), i
+	}
+
+	return v, v.Interface()
+}
+
+func valueIsScalar(v reflect.Value) bool {
+	switch v.Kind() {
+	default:
+		return v.Type().Comparable()
+	case reflect.Struct, reflect.Array, reflect.Ptr, reflect.Chan:
+		return false
+	}
 }
 
 func nilCheck(lhs, rhs interface{}) (Differ, bool) {

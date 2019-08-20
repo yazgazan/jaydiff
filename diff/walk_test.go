@@ -23,6 +23,11 @@ func TestWalk(t *testing.T) {
 			},
 			Want: 5,
 		},
+		{
+			LHS:  structA{Foo: 42, Bar: subStruct{A: 2}},
+			RHS:  structB{Foo: 23, Bar: subStruct{A: 4}},
+			Want: 4,
+		},
 	} {
 		var nCalls int
 
@@ -59,6 +64,10 @@ func TestWalkError(t *testing.T) {
 		{42, 43},
 		{[]int{42}, []int{43}},
 		{map[string]int{"ha": 42}, map[string]int{"ha": 45}},
+		{
+			LHS: structA{Foo: 42, Bar: subStruct{A: 2}},
+			RHS: structB{Foo: 23, Bar: subStruct{A: 4}},
+		},
 	} {
 		d, err := Diff(test.LHS, test.RHS)
 		if err != nil {
