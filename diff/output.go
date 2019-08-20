@@ -16,45 +16,23 @@ type Output struct {
 	JSONValues bool
 }
 
+type colorFn func(format string, a ...interface{}) string
+
+var whiteFn colorFn = nil
+
 func (o Output) red(v interface{}) string {
-	var s string
-
-	switch {
-	default:
-		s = fmt.Sprintf("%v", v)
-	case o.ShowTypes:
-		s = fmt.Sprintf("%T %v", v, v)
-	case o.JSONValues:
-		s = jsonString(v)
-	}
-
-	if !o.Colorized {
-		return s
-	}
-
-	return color.RedString("%s", s)
+	return o.applyColor(v, color.RedString)
 }
 
 func (o Output) green(v interface{}) string {
-	var s string
-
-	switch {
-	default:
-		s = fmt.Sprintf("%v", v)
-	case o.ShowTypes:
-		s = fmt.Sprintf("%T %v", v, v)
-	case o.JSONValues:
-		s = jsonString(v)
-	}
-
-	if !o.Colorized {
-		return s
-	}
-
-	return color.GreenString("%s", s)
+	return o.applyColor(v, color.GreenString)
 }
 
 func (o Output) white(v interface{}) string {
+	return o.applyColor(v, whiteFn)
+}
+
+func (o Output) applyColor(v interface{}, fn colorFn) string {
 	var s string
 
 	switch {
@@ -66,7 +44,11 @@ func (o Output) white(v interface{}) string {
 		s = jsonString(v)
 	}
 
-	return s
+	if !o.Colorized || fn == nil {
+		return s
+	}
+
+	return fn("%s", s)
 }
 
 func (o Output) typ(v interface{}) string {

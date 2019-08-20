@@ -85,13 +85,7 @@ func mapTypesDiffer(lhs, rhs interface{}) (bool, error) {
 	rhsElType := rhsVal.Type().Elem()
 	rhsKeyType := rhsVal.Type().Key()
 
-	if lhsElType.Kind() != rhsElType.Kind() {
-		return true, nil
-	} else if lhsKeyType.Kind() != rhsKeyType.Kind() {
-		return true, nil
-	}
-
-	return false, nil
+	return lhsElType.Kind() != rhsElType.Kind() || lhsKeyType.Kind() != rhsKeyType.Kind(), nil
 }
 
 func (m mapDiff) Diff() Type {
