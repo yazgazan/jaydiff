@@ -119,45 +119,23 @@ func newMyersSlice(c config, lhs, rhs interface{}, visited *visited) (Differ, er
 }
 
 func newSlice(c config, lhs, rhs interface{}, visited *visited) (Differ, error) {
-	var diffs []Differ
-	var indices []int
+	var (
+		diffs       []Differ
+		indices     []int
+		err         error
+		typesDiffer bool
+	)
 
 	lhsVal := reflect.ValueOf(lhs)
 	rhsVal := reflect.ValueOf(rhs)
 
-	if typesDiffer, err := sliceTypesDiffer(lhs, rhs); err != nil {
+	if typesDiffer, err = sliceTypesDiffer(lhs, rhs); err != nil {
 		return slice{
 			lhs: lhs,
 			rhs: rhs,
 		}, err
 	} else if !typesDiffer {
-		nElems := lhsVal.Len()
-		if rhsVal.Len() > nElems {
-			nElems = rhsVal.Len()
-		}
-
-		for i := 0; i < nElems; i++ {
-			indices = append(indices, i)
-			if i < lhsVal.Len() && i < rhsVal.Len() {
-				diff, err := diff(c, lhsVal.Index(i).Interface(), rhsVal.Index(i).Interface(), visited)
-				diffs = append(diffs, diff)
-
-				if err != nil {
-					return slice{
-						lhs:     lhs,
-						rhs:     rhs,
-						diffs:   diffs,
-						indices: indices,
-					}, err
-				}
-				continue
-			}
-			if i >= rhsVal.Len() {
-				diffs = append(diffs, sliceMissing{lhsVal.Index(i).Interface()})
-				continue
-			}
-			diffs = append(diffs, sliceExcess{rhsVal.Index(i).Interface()})
-		}
+		indices, diffs, err = sliceNewSameTypes(c, lhsVal, rhsVal, visited)
 	}
 
 	return slice{
@@ -165,7 +143,34 @@ func newSlice(c config, lhs, rhs interface{}, visited *visited) (Differ, error) 
 		rhs:     rhs,
 		diffs:   diffs,
 		indices: indices,
-	}, nil
+	}, err
+}
+
+func sliceNewSameTypes(c config, lhsVal, rhsVal reflect.Value, visited *visited) (indices []int, diffs []Differ, err error) {
+	nElems := lhsVal.Len()
+	if rhsVal.Len() > nElems {
+		nElems = rhsVal.Len()
+	}
+
+	for i := 0; i < nElems; i++ {
+		indices = append(indices, i)
+		if i < lhsVal.Len() && i < rhsVal.Len() {
+			diff, err := diff(c, lhsVal.Index(i).Interface(), rhsVal.Index(i).Interface(), visited)
+			diffs = append(diffs, diff)
+
+			if err != nil {
+				return indices, diffs, err
+			}
+			continue
+		}
+		if i >= rhsVal.Len() {
+			diffs = append(diffs, sliceMissing{lhsVal.Index(i).Interface()})
+			continue
+		}
+		diffs = append(diffs, sliceExcess{rhsVal.Index(i).Interface()})
+	}
+
+	return indices, diffs, nil
 }
 
 func sliceTypesDiffer(lhs, rhs interface{}) (bool, error) {
