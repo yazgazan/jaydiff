@@ -4,6 +4,7 @@
 [![GoDoc](https://godoc.org/github.com/yazgazan/jaydiff?status.svg)](https://godoc.org/github.com/yazgazan/jaydiff)
 [![Build Status](https://travis-ci.org/yazgazan/jaydiff.svg?branch=master)](https://travis-ci.org/yazgazan/jaydiff)
 [![Coverage Status](https://coveralls.io/repos/github/yazgazan/jaydiff/badge.svg?branch=master)](https://coveralls.io/github/yazgazan/jaydiff?branch=master)
+[![Maintainability](https://api.codeclimate.com/v1/badges/c6114df1683db0db4fe4/maintainability)](https://codeclimate.com/github/yazgazan/jaydiff/maintainability)
 
 A JSON diff utility.
 
