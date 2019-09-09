@@ -7,10 +7,11 @@ go:
 before_install:
     - go get -u golang.org/x/tools/cmd/cover
     - go get -u github.com/mattn/goveralls
-    - GO111MODULE=off go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
+    - GO111MODULE=off go get gopkg.in/golangci/golangci-lint.v1/cmd/golangci-lint
 
 script:
     - go build
+    - golangci-lint --version
     - golangci-lint run
     - go test -v ./...
     - go test -v -covermode=count -coverprofile=coverage.out ./diff
