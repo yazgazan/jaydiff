@@ -16,6 +16,7 @@ type files struct {
 
 type config struct {
 	Files  files          `positional-args:"yes" required:"yes"`
+	JsonLines  bool   `long:"json-lines" short:"j" description:"compare json file line by line"`
 	Ignore ignorePatterns `long:"ignore" short:"i" description:"paths to ignore (glob)"`
 	output
 	IgnoreExcess  bool   `long:"ignore-excess" description:"ignore excess keys and arrey elements"`
