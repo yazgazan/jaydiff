@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"bufio"
-	"log"
 	"os"
 
 	"github.com/yazgazan/jaydiff/diff"
@@ -46,13 +45,15 @@ func compareJsonLines(conf *config) int {
 
 	lhs_file, err = os.Open(conf.Files.LHS)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Fprintf(os.Stderr, "Error: cannot read %s: %s\n", conf.Files.LHS, err.Error())
+		return statusReadError
 	}
 	defer lhs_file.Close()
 
 	rhs_file, err = os.Open(conf.Files.RHS)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Fprintf(os.Stderr, "Error: cannot read %s: %s\n", conf.Files.RHS, err.Error())
+		return statusReadError
 	}
 	defer rhs_file.Close()
 
