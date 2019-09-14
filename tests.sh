@@ -96,3 +96,16 @@ else
 	echo "OK"
 fi
 echo
+
+
+echo "./jaydiff --report:"
+./jaydiff --report --json-lines\
+	test_files/lhs_stream.json test_files/rhs_stream.json
+CODE=$?
+if [[ $CODE -ne 6 ]]; then
+	echo "FAIL with code $CODE"
+	FAILED=1
+else
+	echo "OK"
+fi
+echo
