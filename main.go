@@ -1,51 +1,166 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 
 	"github.com/yazgazan/jaydiff/diff"
 )
 
 const (
-	statusUsage          = 2
-	statusReadError      = 3
-	statusUnmarshalError = 4
-	statusDiffError      = 5
-	statusDiffMismatch   = 6
+	statusUsage           = 2
+	statusReadError       = 3
+	statusUnexpectedError = 4
+	statusDiffError       = 5
+	statusDiffMismatch    = 6
 )
 
 var (
 	// Version is replaced by the tag when creating a new release
 	Version = "dev"
 )
+type nextJson func() (interface{}, int, error)
 
 func main() {
-	var err error
+	var (
+		lhs_file,rhs_file *os.File
+		err error
+	)
+
 	conf := readConfig()
 
-	lhs := parseFile(conf.Files.LHS)
-	rhs := parseFile(conf.Files.RHS)
+	// Open files for reading
+	lhs_file, err = os.Open(conf.Files.LHS)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: cannot read %s: %s\n", conf.Files.LHS, err.Error())
+		os.Exit(statusReadError)
+	}
+	defer lhs_file.Close()
+	rhs_file, err = os.Open(conf.Files.RHS)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: cannot read %s: %s\n", conf.Files.RHS, err.Error())
+		os.Exit(statusReadError)
+	}
+	defer rhs_file.Close()
 
+	//
+	if conf.JsonLines {
+		os.Exit(compareLoop(getNextJsonByLine(lhs_file), getNextJsonByLine(rhs_file),&conf))
+	} else {
+		os.Exit(compareLoop(getNextJson(lhs_file), getNextJson(rhs_file),&conf))
+	}
+}
+
+func compareLoop(lhs_next, rhs_next nextJson, conf *config) int {
+	var is_eof bool
+	var lhs_err,rhs_err, err error
+	var lhs,rhs interface{}
+	var lhs_cnt, rhs_cnt, rc, rc_final int
+
+	rc_final = 0
+	is_eof = false
+
+	for !is_eof {
+		lhs, lhs_cnt, lhs_err = lhs_next()
+		rhs, rhs_cnt,rhs_err = rhs_next()
+
+		// If both file reach EOF
+		switch {
+		case lhs_err == io.EOF && rhs_err == io.EOF:
+			is_eof = true
+			continue
+		case lhs_err != nil && lhs_err != io.EOF:
+			fmt.Fprintln(os.Stderr, lhs_err.Error())
+			return statusUnexpectedError
+		case rhs_err != nil && rhs_err != io.EOF:
+			fmt.Fprintln(os.Stderr, rhs_err.Error())
+			return statusUnexpectedError
+		}
+
+		rc, err = compare(lhs, rhs, lhs_cnt,rhs_cnt, conf)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			return rc
+		}
+		if rc > 0 {
+			rc_final = rc
+		}
+	}
+	return rc_final
+}
+
+func getNextJson(file io.Reader) nextJson {
+	var (
+		r *json.Decoder
+		cnt int = 0
+	)
+	r =	json.NewDecoder(file)
+
+	return func() (interface{}, int, error){
+		var (
+			err error
+			i interface{}
+		)
+
+		err = r.Decode(&i)
+		if err == nil {
+			cnt++
+		} else {
+			i = new(map[string]interface{})
+		}
+
+		return i, cnt, err
+	}
+}
+
+func getNextJsonByLine(file io.Reader) nextJson {
+	var (
+		r *bufio.Scanner
+		cnt int = 0
+	)
+	r = bufio.NewScanner(file)
+
+	return func() (interface{}, int, error) {
+		var (
+			err error
+		  i interface{}
+		)
+		if r.Scan() {
+			cnt++
+			err = json.Unmarshal(r.Bytes(), &i)
+		} else {
+			i = new(map[string]interface{})
+			// https://golang.org/pkg/bufio/#Scanner.Scan
+			if err = r.Err(); err == nil {
+				err = io.EOF
+			}
+		}
+
+		return i, cnt, err
+	}
+}
+
+func compare(lhs, rhs interface{},lhs_cnt, rhs_cnt int, conf *config) (int, error) {
 	d, err := diff.Diff(lhs, rhs, conf.Opts()...)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: diff failed: %s", err)
-		os.Exit(statusDiffError)
+		return statusDiffError, fmt.Errorf("Error: diff failed: %s", err)
 	}
 
 	d, err = pruneIgnore(d, conf.IgnoreExcess, conf.IgnoreValues, conf.Ignore)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: ignoring failed: %s", err)
-		os.Exit(statusDiffError)
+		return statusDiffError, fmt.Errorf("Error: ignoring failed: %s", err)
 	}
 
 	if conf.OutputReport {
 		ss, err := diff.Report(d, diff.Output(conf.output))
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: Failed to generate report: %s", err)
-			os.Exit(statusDiffError)
+			return statusDiffError, fmt.Errorf("Error: Failed to generate report: %s", err)
+		}
+		if len(ss) > 0 {
+			fmt.Printf("Pos [%d:%d]\n",lhs_cnt,rhs_cnt)
 		}
 		for _, s := range ss {
 			fmt.Println(s)
@@ -54,8 +169,9 @@ func main() {
 		fmt.Println(d.StringIndent("", "", diff.Output(conf.output)))
 	}
 	if d.Diff() != diff.Identical {
-		os.Exit(statusDiffMismatch)
+		 return statusDiffMismatch, nil
 	}
+	return 0, nil
 }
 
 func pruneIgnore(d diff.Differ, ingoreExcess, ignoreValues bool, ignore ignorePatterns) (diff.Differ, error) {
@@ -74,22 +190,4 @@ func pruneIgnore(d diff.Differ, ingoreExcess, ignoreValues bool, ignore ignorePa
 
 		return nil, nil
 	})
-}
-
-func parseFile(fname string) interface{} {
-	var err error
-	var val interface{}
-
-	b, err := ioutil.ReadFile(fname)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: cannot read %s\n", fname)
-		os.Exit(statusReadError)
-	}
-	err = json.Unmarshal(b, &val)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: cannot parse %s: %s\n", fname, err)
-		os.Exit(statusUnmarshalError)
-	}
-
-	return val
 }
