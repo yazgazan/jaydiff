@@ -22,7 +22,7 @@ var (
 	// Version is replaced by the tag when creating a new release
 	Version = "dev"
 )
-type nextJson func() (error, interface{}, int)
+type nextJson func() (interface{}, int, error)
 
 func main() {
 	var (
@@ -35,13 +35,13 @@ func main() {
 	// Open files for reading
 	lhs_file, err = os.Open(conf.Files.LHS)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: cannot read %s: %s\n", conf.Files.LHS, err.Error())
+		fmt.Fprintf(os.Stderr, "error: cannot read %s: %s\n", conf.Files.LHS, err.Error())
 		os.Exit(statusReadError)
 	}
 	defer lhs_file.Close()
 	rhs_file, err = os.Open(conf.Files.RHS)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: cannot read %s: %s\n", conf.Files.RHS, err.Error())
+		fmt.Fprintf(os.Stderr, "error: cannot read %s: %s\n", conf.Files.RHS, err.Error())
 		os.Exit(statusReadError)
 	}
 	defer rhs_file.Close()
@@ -64,24 +64,25 @@ func compareLoop(lhs_next, rhs_next nextJson, conf *config) int {
 	is_eof = false
 
 	for !is_eof {
-		lhs_err, lhs, lhs_cnt = lhs_next()
-		rhs_err, rhs, rhs_cnt = rhs_next()
+		lhs, lhs_cnt, lhs_err = lhs_next()
+		rhs, rhs_cnt,rhs_err = rhs_next()
 
 		// If both file reach EOF
-		if lhs_err == io.EOF && rhs_err == io.EOF {
+		switch {
+		case lhs_err == io.EOF && rhs_err == io.EOF:
 			is_eof = true
 			continue
-		} else if lhs_err != nil && lhs_err != io.EOF {
-			fmt.Fprintf(os.Stderr, lhs_err.Error())
-			return statusUnexpectedError // TODO: Correct error code?
-		} else if rhs_err != nil && rhs_err != io.EOF {
-			fmt.Fprintf(os.Stderr, rhs_err.Error())
-			return statusUnexpectedError // TODO: Correct error code?
+		case lhs_err != nil && lhs_err != io.EOF:
+			fmt.Fprintln(os.Stderr, lhs_err.Error())
+			return statusUnexpectedError
+		case rhs_err != nil && rhs_err != io.EOF:
+			fmt.Fprintln(os.Stderr, rhs_err.Error())
+			return statusUnexpectedError
 		}
 
 		rc, err = compare(lhs, rhs, lhs_cnt,rhs_cnt, conf)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			return rc
 		}
 		if rc > 0 {
@@ -91,14 +92,14 @@ func compareLoop(lhs_next, rhs_next nextJson, conf *config) int {
 	return rc_final
 }
 
-func getNextJson(file *os.File) nextJson {
+func getNextJson(file io.Reader) nextJson {
 	var (
 		r *json.Decoder
 		cnt int = 0
 	)
 	r =	json.NewDecoder(file)
 
-	return func() (error, interface{}, int){
+	return func() (interface{}, int, error){
 		var (
 			err error
 			i interface{}
@@ -111,18 +112,18 @@ func getNextJson(file *os.File) nextJson {
 			i = new(map[string]interface{})
 		}
 
-		return err, i, cnt
+		return i, cnt, err
 	}
 }
 
-func getNextJsonByLine(file *os.File) nextJson {
+func getNextJsonByLine(file io.Reader) nextJson {
 	var (
 		r *bufio.Scanner
 		cnt int = 0
 	)
 	r = bufio.NewScanner(file)
 
-	return func() (error, interface{}, int) {
+	return func() (interface{}, int, error) {
 		var (
 			err error
 		  i interface{}
@@ -138,7 +139,7 @@ func getNextJsonByLine(file *os.File) nextJson {
 			}
 		}
 
-		return err, i, cnt
+		return i, cnt, err
 	}
 }
 
