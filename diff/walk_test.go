@@ -28,6 +28,11 @@ func TestWalk(t *testing.T) {
 			RHS:  structB{Foo: 23, Bar: subStruct{A: 4}},
 			Want: 4,
 		},
+		{
+			LHS:  mockStream(1, 2, 3),
+			RHS:  mockStream(1, 2, 3, 4),
+			Want: 5,
+		},
 	} {
 		var nCalls int
 
@@ -67,6 +72,10 @@ func TestWalkError(t *testing.T) {
 		{
 			LHS: structA{Foo: 42, Bar: subStruct{A: 2}},
 			RHS: structB{Foo: 23, Bar: subStruct{A: 4}},
+		},
+		{
+			LHS: mockStream(1, 2, 3),
+			RHS: mockStream(1, 2, 3, 4),
 		},
 	} {
 		d, err := Diff(test.LHS, test.RHS)

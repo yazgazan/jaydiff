@@ -159,6 +159,34 @@ $ jaydiff --report --show-types --ignore-excess --ignore-values old.json new.jso
 - .f: float64 42
 ```
 
+JSON streams:
+
+```diff
+$ jaydiff --stream --json old.json new.json
+
+ [
+      {"foo":"bar"},
+     [
+         2,
+         3,
+         4,
+         {
++            "v": "some"
+         }
+     ],
++    {"some":"thing"}
+ ]
+```
+
+Validating JSON stream types:
+
+```diff
+$ jaydiff --ignore-excess --ignore-values --stream-validate --report --show-types base.json stream.json
+
+- [1].bar: float64 4.2
++ [1].bar: string !
+```
+
 ## Ideas
 
 - JayPatch

@@ -54,4 +54,21 @@ $ jaydiff --report --show-types --ignore-excess --ignore-values old.json new.jso
 $(./jaydiff --report --ignore-excess --ignore-values --indent='    ' --show-types test_files/lhs.json test_files/rhs.json)
 $(echo '```')
 
+JSON streams:
+
+$(echo '```diff')
+$ jaydiff --stream --json old.json new.json
+
+$(./jaydiff --stream --json --indent='    ' test_files/lhs_stream.json test_files/rhs_stream.json)
+$(echo '```')
+
+Validating JSON stream types:
+
+$(echo '```diff')
+$ jaydiff --ignore-excess --ignore-values --stream-validate --report --show-types base.json stream.json
+
+$(./jaydiff --ignore-excess --ignore-values --stream-validate --report --show-types test_files/lhs_validate.json test_files/rhs_validate.json)
+$(echo '```')
+
+
 EOF

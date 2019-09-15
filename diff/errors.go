@@ -43,3 +43,11 @@ type ErrRHSNotSupported struct {
 func (e ErrRHSNotSupported) Error() string {
 	return fmt.Sprintf("%T does not contain an RHS value", e.Diff)
 }
+
+type errInvalidStream struct {
+	Value interface{}
+}
+
+func (e errInvalidStream) Error() string {
+	return fmt.Sprintf("%T does not implement the Stream interface", e.Value)
+}

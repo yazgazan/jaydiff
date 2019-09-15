@@ -1,11 +1,39 @@
 package diff
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"reflect"
 	"strings"
 	"testing"
 )
+
+type mockedStream struct {
+	values []interface{}
+	i      int
+}
+
+func mockStream(ii ...interface{}) *mockedStream {
+	return &mockedStream{
+		values: ii,
+	}
+}
+
+func (s *mockedStream) NextValue() (interface{}, error) {
+	if s.i >= len(s.values) {
+		return nil, io.EOF
+	}
+
+	s.i++
+	return s.values[s.i-1], nil
+}
+
+type erroringMockedStream struct{}
+
+func (s erroringMockedStream) NextValue() (interface{}, error) {
+	return nil, errors.New("stream error")
+}
 
 func TestDiff(t *testing.T) {
 	for _, test := range []struct {
@@ -73,6 +101,16 @@ func TestDiff(t *testing.T) {
 			RHS:  struct{ Bar int }{Bar: 42},
 			Want: TypesDiffer,
 		},
+		{
+			LHS:  mockStream(1, 2, 3),
+			RHS:  mockStream(1, 2, 3),
+			Want: Identical,
+		},
+		{
+			LHS:  mockStream(1, 2, 3),
+			RHS:  mockStream(4, 5, 6),
+			Want: ContentDiffer,
+		},
 	} {
 		diff, err := Diff(test.LHS, test.RHS)
 
@@ -136,6 +174,7 @@ func TestDiffMyers(t *testing.T) {
 		}
 	}
 }
+
 func TestTypeString(t *testing.T) {
 	for _, test := range []struct {
 		Input Type
@@ -257,392 +296,6 @@ func TestScalar(t *testing.T) {
 		ss := typ.Strings()
 		indented := typ.StringIndent(testKey, testPrefix, testOutput)
 		testStrings("TestScalar", t, test.Want, ss, indented)
-	}
-}
-
-func TestSlice(t *testing.T) {
-	for _, test := range []stringTest{
-		{
-			LHS: []int{1, 2},
-			RHS: []int{1, 2},
-			Want: [][]string{
-				{"int", "1", "2"},
-			},
-			WantJSON: [][]string{
-				{"1", "2"},
-			},
-			Type: Identical,
-		},
-		{
-			LHS: []int{1},
-			RHS: []int{},
-			Want: [][]string{
-				{},
-				{"-", "int", "1"},
-				{},
-			},
-			WantJSON: [][]string{
-				{},
-				{"-", "1"},
-				{},
-			},
-			Type: ContentDiffer,
-		},
-		{
-			LHS: []int{},
-			RHS: []int{2},
-			Want: [][]string{
-				{},
-				{"+", "int", "2"},
-				{},
-			},
-			WantJSON: [][]string{
-				{},
-				{"+", "2"},
-				{},
-			},
-			Type: ContentDiffer,
-		},
-		{
-			LHS: []int{1, 2},
-			RHS: []float64{1.1, 2.1},
-			Want: [][]string{
-				{"-", "int", "1", "2"},
-				{"+", "float64", "1.1", "2.1"},
-			},
-			WantJSON: [][]string{
-				{"-", "1", "2"},
-				{"+", "1.1", "2.1"},
-			},
-			Type: TypesDiffer,
-		},
-		{
-			LHS: []int{1, 3},
-			RHS: []int{1, 2},
-			Want: [][]string{
-				{},
-				{"int", "1"},
-				{"-", "int", "3"},
-				{"+", "int", "2"},
-				{},
-			},
-			WantJSON: [][]string{
-				{},
-				{"1"},
-				{"-", "3"},
-				{"+", "2"},
-				{},
-			},
-			Type: ContentDiffer,
-		},
-	} {
-		typ, err := newSlice(defaultConfig(), test.LHS, test.RHS, &visited{})
-
-		if err != nil {
-			t.Errorf("NewSlice(%+v, %+v): unexpected error: %q", test.LHS, test.RHS, err)
-			continue
-		}
-		if typ.Diff() != test.Type {
-			t.Errorf("Types.Diff() = %q, expected %q", typ.Diff(), test.Type)
-		}
-
-		ss := typ.Strings()
-		indented := typ.StringIndent(testKey, testPrefix, testOutput)
-		testStrings("TestSlice", t, test.Want, ss, indented)
-
-		indentedJSON := typ.StringIndent(testKey, testPrefix, testJSONOutput)
-		testStrings("TestSlice", t, test.WantJSON, ss, indentedJSON)
-	}
-
-	invalid, err := newSlice(defaultConfig(), nil, nil, &visited{})
-	if invalidErr, ok := err.(errInvalidType); ok {
-		if !strings.Contains(invalidErr.Error(), "nil") {
-			t.Errorf("NewSlice(nil, nil): unexpected format for InvalidType error: got %s", err)
-		}
-	} else {
-		t.Errorf("NewSlice(nil, nil): expected InvalidType error, got %s", err)
-	}
-	ss := invalid.Strings()
-	if len(ss) != 0 {
-		t.Errorf("len(invalidSlice.Strings()) = %d, expected 0", len(ss))
-	}
-
-	indented := invalid.StringIndent(testKey, testPrefix, testOutput)
-	if indented != "" {
-		t.Errorf("invalidSlice.StringIndent(%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
-	}
-
-	invalid, err = newSlice(defaultConfig(), []int{}, nil, &visited{})
-	if invalidErr, ok := err.(errInvalidType); ok {
-		if !strings.Contains(invalidErr.Error(), "nil") {
-			t.Errorf("NewSlice([]int{}, nil): unexpected format for InvalidType error: got %s", err)
-		}
-	} else {
-		t.Errorf("NewSlice([]int{}, nil): expected InvalidType error, got %s", err)
-	}
-	ss = invalid.Strings()
-	if len(ss) != 0 {
-		t.Errorf("len(invalidSlice.Strings()) = %d, expected 0", len(ss))
-	}
-
-	indented = invalid.StringIndent(testKey, testPrefix, testOutput)
-	if indented != "" {
-		t.Errorf("invalidSlice.StringIndent(%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
-	}
-}
-
-func TestSliceMyers(t *testing.T) {
-	c := defaultConfig()
-	c = UseSliceMyers()(c)
-
-	for _, test := range []stringTest{
-		{
-			LHS: []int{1, 2},
-			RHS: []int{1, 2},
-			Want: [][]string{
-				{"int", "1", "2"},
-			},
-			Type: Identical,
-		},
-		{
-			LHS: []int{1},
-			RHS: []int{},
-			Want: [][]string{
-				{},
-				{"-", "int", "1"},
-				{},
-			},
-			Type: ContentDiffer,
-		},
-		{
-			LHS: []int{},
-			RHS: []int{2},
-			Want: [][]string{
-				{},
-				{"+", "int", "2"},
-				{},
-			},
-			Type: ContentDiffer,
-		},
-		{
-			LHS: []int{1, 2},
-			RHS: []float64{1.1, 2.1},
-			Want: [][]string{
-				{"-", "int", "1", "2"},
-				{"+", "float64", "1.1", "2.1"},
-			},
-			Type: TypesDiffer,
-		},
-		{
-			LHS: []int{1, 3},
-			RHS: []int{1, 2},
-			Want: [][]string{
-				{},
-				{"int", "1"},
-				{"-", "int", "3"},
-				{"+", "int", "2"},
-				{},
-			},
-			Type: ContentDiffer,
-		},
-	} {
-		typ, err := c.sliceFn(c, test.LHS, test.RHS, &visited{})
-
-		if err != nil {
-			t.Errorf("NewMyersSlice(%+v, %+v): unexpected error: %q", test.LHS, test.RHS, err)
-			continue
-		}
-		if typ.Diff() != test.Type {
-			t.Errorf("Types.Diff() = %q, expected %q", typ.Diff(), test.Type)
-		}
-
-		ss := typ.Strings()
-		indented := typ.StringIndent(testKey, testPrefix, testOutput)
-		testStrings("TestSlice", t, test.Want, ss, indented)
-	}
-
-	invalid, err := c.sliceFn(c, nil, nil, &visited{})
-	if invalidErr, ok := err.(errInvalidType); ok {
-		if !strings.Contains(invalidErr.Error(), "nil") {
-			t.Errorf("NewMyersSlice(nil, nil): unexpected format for InvalidType error: got %s", err)
-		}
-	} else {
-		t.Errorf("NewMyersSlice(nil, nil): expected InvalidType error, got %s", err)
-	}
-	ss := invalid.Strings()
-	if len(ss) != 0 {
-		t.Errorf("len(invalidSlice.Strings()) = %d, expected 0", len(ss))
-	}
-
-	indented := invalid.StringIndent(testKey, testPrefix, testOutput)
-	if indented != "" {
-		t.Errorf("invalidSlice.StringIndent(%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
-	}
-
-	invalid, err = c.sliceFn(c, []int{}, nil, &visited{})
-	if invalidErr, ok := err.(errInvalidType); ok {
-		if !strings.Contains(invalidErr.Error(), "nil") {
-			t.Errorf("NewMyersSlice([]int{}, nil): unexpected format for InvalidType error: got %s", err)
-		}
-	} else {
-		t.Errorf("NewMyersSlice([]int{}, nil): expected InvalidType error, got %s", err)
-	}
-	ss = invalid.Strings()
-	if len(ss) != 0 {
-		t.Errorf("len(invalidSlice.Strings()) = %d, expected 0", len(ss))
-	}
-
-	indented = invalid.StringIndent(testKey, testPrefix, testOutput)
-	if indented != "" {
-		t.Errorf("invalidSlice.StringIndent(%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
-	}
-}
-
-func TestMap(t *testing.T) {
-	for i, test := range []stringTest{
-		{
-			LHS: map[int]int{1: 2, 3: 4},
-			RHS: map[int]int{1: 2, 3: 4},
-			Want: [][]string{
-				{"int", "1", "2", "3", "4"},
-			},
-			WantJSON: [][]string{
-				{"1", "2", "3", "4"},
-			},
-			Type: Identical,
-		},
-		{
-			LHS: map[int]int{1: 2},
-			RHS: map[int]float64{1: 3.1},
-			Want: [][]string{
-				{"-", "int", "1", "2"},
-				{"+", "float64", "3"},
-			},
-			WantJSON: [][]string{
-				{"-", "1", "2"},
-				{"+", "3"},
-			},
-			Type: TypesDiffer,
-		},
-		{
-			LHS: map[int]int{1: 2},
-			RHS: map[int]int{1: 3},
-			Want: [][]string{
-				{},
-				{"-", "int", "1", "2"},
-				{"+", "int", "1", "3"},
-				{},
-			},
-			WantJSON: [][]string{
-				{},
-				{"-", "1", "2"},
-				{"+", "1", "3"},
-				{},
-			},
-			Type: ContentDiffer,
-		},
-		{
-			LHS: map[int]int{1: 2, 2: 3},
-			RHS: map[int]int{1: 3, 2: 3},
-			Want: [][]string{
-				{},
-				{"-", "int", "1", "2"},
-				{"+", "int", "1", "3"},
-				{"int", "2", "3"},
-				{},
-			},
-			WantJSON: [][]string{
-				{},
-				{"-", "1", "2"},
-				{"+", "1", "3"},
-				{"2", "3"},
-				{},
-			},
-			Type: ContentDiffer,
-		},
-		{
-			LHS: map[int]int{1: 2},
-			RHS: map[int]int{},
-			Want: [][]string{
-				{},
-				{"-", "int", "1", "2"},
-				{},
-			},
-			WantJSON: [][]string{
-				{},
-				{"-", "1", "2"},
-				{},
-			},
-			Type: ContentDiffer,
-		},
-		{
-			LHS: map[int]int{},
-			RHS: map[int]int{1: 2},
-			Want: [][]string{
-				{},
-				{"+", "int", "1", "2"},
-				{},
-			},
-			WantJSON: [][]string{
-				{},
-				{"+", "1", "2"},
-				{},
-			},
-			Type: ContentDiffer,
-		},
-	} {
-		m, err := newMap(defaultConfig(), test.LHS, test.RHS, &visited{})
-
-		if err != nil {
-			t.Errorf("newMap(%+v, %+v): unexpected error: %q", test.LHS, test.RHS, err)
-			continue
-		}
-		if m.Diff() != test.Type {
-			t.Errorf("Types.Diff() = %q, expected %q", m.Diff(), test.Type)
-		}
-
-		ss := m.Strings()
-		indented := m.StringIndent(testKey, testPrefix, testOutput)
-		testStrings(fmt.Sprintf("TestMap[%d]", i), t, test.Want, ss, indented)
-
-		indentedJSON := m.StringIndent(testKey, testPrefix, testJSONOutput)
-		testStrings(fmt.Sprintf("TestMap[%d]", i), t, test.WantJSON, ss, indentedJSON)
-	}
-
-	invalid, err := newMap(defaultConfig(), nil, nil, &visited{})
-	if invalidErr, ok := err.(errInvalidType); ok {
-		if !strings.Contains(invalidErr.Error(), "nil") {
-			t.Errorf("newMap(nil, nil): unexpected format for InvalidType error: got %s", err)
-		}
-	} else {
-		t.Errorf("newMap(nil, nil): expected InvalidType error, got %s", err)
-	}
-	ss := invalid.Strings()
-	if len(ss) != 0 {
-		t.Errorf("len(invalidMap.Strings()) = %d, expected 0", len(ss))
-	}
-
-	indented := invalid.StringIndent(testKey, testPrefix, testOutput)
-	if indented != "" {
-		t.Errorf("invalidMap.StringIndent(%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
-	}
-
-	invalid, err = newMap(defaultConfig(), map[int]int{}, nil, &visited{})
-	if invalidErr, ok := err.(errInvalidType); ok {
-		if !strings.Contains(invalidErr.Error(), "nil") {
-			t.Errorf("NewMap(map[int]int{}, nil): unexpected format for InvalidType error: got %s", err)
-		}
-	} else {
-		t.Errorf("NewMap(map[int]int{}, nil): expected InvalidType error, got %s", err)
-	}
-	ss = invalid.Strings()
-	if len(ss) != 0 {
-		t.Errorf("len(invalidMap.Strings()) = %d, expected 0", len(ss))
-	}
-
-	indented = invalid.StringIndent(testKey, testPrefix, testOutput)
-	if indented != "" {
-		t.Errorf("invalidMap.StringIndent(%q, %q, %+v) = %q, expected %q", testKey, testPrefix, testOutput, indented, "")
 	}
 }
 
@@ -900,6 +553,18 @@ func TestLHS(t *testing.T) {
 		t.Errorf("LHS(%+v) = %v, expected %d", validLHSSliceGetter, v, 42)
 	}
 
+	validLHSStreamGetter := Differ(&stream{
+		lhs: []interface{}{42},
+		rhs: []interface{}{"hello"},
+	})
+	v, err = LHS(validLHSStreamGetter)
+	if err != nil {
+		t.Errorf("LHS(%+v): unexpected error: %s", validLHSStreamGetter, err)
+	}
+	if !reflect.DeepEqual(v, []interface{}{interface{}(42)}) {
+		t.Errorf("LHS(%+v) = %v, expected %d", validLHSStreamGetter, v, 42)
+	}
+
 	validLHSScalarGetter := Differ(&scalar{
 		lhs: 42,
 		rhs: "hello",
@@ -921,6 +586,17 @@ func TestLHS(t *testing.T) {
 	}
 	if i, ok := v.(int); !ok || i != 42 {
 		t.Errorf("LHS(%+v) = %v, expected %d", validLHSSliceMissingGetter, v, 42)
+	}
+
+	validLHSStreamMissingGetter := Differ(&streamMissing{
+		value: 42,
+	})
+	v, err = LHS(validLHSStreamMissingGetter)
+	if err != nil {
+		t.Errorf("LHS(%+v): unexpected error: %s", validLHSStreamMissingGetter, err)
+	}
+	if i, ok := v.(int); !ok || i != 42 {
+		t.Errorf("LHS(%+v) = %v, expected %d", validLHSStreamMissingGetter, v, 42)
 	}
 
 	validLHSMapMissingGetter := Differ(&mapMissing{
@@ -996,6 +672,18 @@ func TestRHS(t *testing.T) {
 		t.Errorf("RHS(%+v) = %v, expected %q", validRHSSliceGetter, v, "hello")
 	}
 
+	validRHSStreamGetter := Differ(&stream{
+		lhs: []interface{}{42},
+		rhs: []interface{}{"hello"},
+	})
+	v, err = RHS(validRHSStreamGetter)
+	if err != nil {
+		t.Errorf("RHS(%+v): unexpected error: %s", validRHSStreamGetter, err)
+	}
+	if !reflect.DeepEqual(v, []interface{}{interface{}("hello")}) {
+		t.Errorf("RHS(%+v) = %v, expected %q", validRHSStreamGetter, v, "hello")
+	}
+
 	validRHSScalarGetter := Differ(&scalar{
 		lhs: 42,
 		rhs: "hello",
@@ -1017,6 +705,17 @@ func TestRHS(t *testing.T) {
 	}
 	if s, ok := v.(string); !ok || s != "hello" {
 		t.Errorf("RHS(%+v) = %v, expected %q", validRHSSliceExcessGetter, v, "hello")
+	}
+
+	validRHSStreamExcessGetter := Differ(&streamExcess{
+		value: "hello",
+	})
+	v, err = RHS(validRHSStreamExcessGetter)
+	if err != nil {
+		t.Errorf("RHS(%+v): unexpected error: %s", validRHSStreamExcessGetter, err)
+	}
+	if s, ok := v.(string); !ok || s != "hello" {
+		t.Errorf("RHS(%+v) = %v, expected %q", validRHSStreamExcessGetter, v, "hello")
 	}
 
 	validRHSMapExcessGetter := Differ(&mapExcess{
@@ -1156,6 +855,17 @@ func TestIsSlice(t *testing.T) {
 	}
 }
 
+func TestIsStream(t *testing.T) {
+	d, err := Diff(mockStream(0, 1), mockStream(2, 3))
+	if err != nil {
+		t.Errorf("Diff(Stream, Stream): unexpected error: %s", err)
+		return
+	}
+	if !IsStream(d) {
+		t.Error("IsStream(Diff(map{...}, map{...})) = false, expected true")
+	}
+}
+
 func TestValueIsScalar(t *testing.T) {
 	for _, test := range []struct {
 		In       interface{}
@@ -1181,6 +891,25 @@ func TestValueIsScalar(t *testing.T) {
 		got := valueIsScalar(v)
 		if got != test.Expected {
 			t.Errorf("valueIsScalar(%T) = %v, expected %v", test.In, got, test.Expected)
+		}
+	}
+}
+
+func TestValueIsStream(t *testing.T) {
+	for _, test := range []struct {
+		In       interface{}
+		Expected bool
+	}{
+		{nil, false},
+		{42, false},
+		{[]int{4, 2}, false},
+		{func() {}, false},
+		{mockStream(), true},
+	} {
+		v := reflect.ValueOf(test.In)
+		got := valueIsStream(v)
+		if got != test.Expected {
+			t.Errorf("valueIsStream(%T) = %v, expected %v", test.In, got, test.Expected)
 		}
 	}
 }

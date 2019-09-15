@@ -31,7 +31,7 @@ type diffFn func(c config, lhs, rhs interface{}, visited *visited) (Differ, erro
 
 // Diff generates a tree representing differences and similarities between two objects.
 //
-// Diff supports maps, slices and scalars (comparables types such as int, string, etc ...).
+// Diff supports maps, slices, Stream and scalars (comparables types such as int, string, etc ...).
 // When an unsupported type is encountered, an ErrUnsupported error is returned.
 func Diff(lhs, rhs interface{}, opts ...ConfigOpt) (Differ, error) {
 	c := defaultConfig()
@@ -56,32 +56,54 @@ func diff(c config, lhs, rhs interface{}, visited *visited) (Differ, error) {
 		return types{lhs, rhs}, ErrCyclic
 	}
 
-	if valueIsScalar(lhsVal) && valueIsScalar(rhsVal) {
-		return scalar{lhs, rhs}, nil
-	}
-	if lhsVal.Kind() != rhsVal.Kind() {
-		return types{lhs, rhs}, nil
+	return diffValues(c, lhsVal, rhsVal, visited)
+}
+
+func diffValues(c config, lhs, rhs reflect.Value, visited *visited) (Differ, error) {
+	if valueIsStream(lhs) && valueIsStream(rhs) {
+		return newStream(c, lhs.Interface(), rhs.Interface(), visited)
 	}
 
-	switch lhsVal.Kind() {
+	if valueIsScalar(lhs) && valueIsScalar(rhs) {
+		return scalar{lhs.Interface(), rhs.Interface()}, nil
+	}
+	if lhs.Kind() != rhs.Kind() {
+		return types{lhs.Interface(), rhs.Interface()}, nil
+	}
+
+	switch lhs.Kind() {
 	case reflect.Slice, reflect.Array:
-		return c.sliceFn(c, lhs, rhs, visited)
+		return c.sliceFn(c, lhs.Interface(), rhs.Interface(), visited)
 	case reflect.Map:
-		return newMap(c, lhs, rhs, visited)
+		return newMap(c, lhs.Interface(), rhs.Interface(), visited)
 	case reflect.Struct:
-		return newStruct(c, lhs, rhs, visited)
+		return newStruct(c, lhs.Interface(), rhs.Interface(), visited)
 	}
 
-	return types{lhs, rhs}, &ErrUnsupported{lhsVal.Type(), rhsVal.Type()}
+	return types{lhs.Interface(), rhs.Interface()}, &ErrUnsupported{lhs.Type(), rhs.Type()}
 }
 
 func indirectValueOf(i interface{}) (reflect.Value, interface{}) {
+	if _, ok := i.(Stream); ok {
+		return reflect.ValueOf(i), i
+	}
+
 	v := reflect.Indirect(reflect.ValueOf(i))
 	if !v.IsValid() || !v.CanInterface() {
 		return reflect.ValueOf(i), i
 	}
 
 	return v, v.Interface()
+}
+
+func valueIsStream(v reflect.Value) bool {
+	if !v.IsValid() || !v.CanInterface() {
+		return false
+	}
+
+	_, ok := v.Interface().(Stream)
+
+	return ok
 }
 
 func valueIsScalar(v reflect.Value) bool {
@@ -122,9 +144,7 @@ func IsExcess(d Differ) bool {
 	switch d.(type) {
 	default:
 		return false
-	case mapExcess:
-		return true
-	case sliceExcess:
+	case mapExcess, sliceExcess, streamExcess:
 		return true
 	}
 }
@@ -134,9 +154,7 @@ func IsMissing(d Differ) bool {
 	switch d.(type) {
 	default:
 		return false
-	case mapMissing:
-		return true
-	case sliceMissing:
+	case mapMissing, sliceMissing, streamMissing:
 		return true
 	}
 }
@@ -172,6 +190,13 @@ func IsMap(d Differ) bool {
 // IsSlice returns true if d is a diff between towo slices
 func IsSlice(d Differ) bool {
 	_, ok := d.(slice)
+
+	return ok
+}
+
+// IsStream returns true if d is a diff between towo slices
+func IsStream(d Differ) bool {
+	_, ok := d.(stream)
 
 	return ok
 }

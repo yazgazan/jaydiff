@@ -68,6 +68,55 @@ else
 fi
 echo
 
+echo "./jaydiff --report --stream-lines:"
+./jaydiff --report --stream-lines \
+	test_files/lhs_lines.json test_files/rhs_lines.json
+CODE=$?
+if [[ $CODE -ne 6 ]]; then
+	echo "FAIL with code $CODE"
+	FAILED=1
+else
+	echo "OK"
+fi
+echo
+
+echo "./jaydiff --report --stream-lines --ignore [].c.b:"
+./jaydiff --report --stream-lines --ignore '\[\].c.b' \
+	test_files/lhs_lines.json test_files/rhs_lines.json
+CODE=$?
+if [[ $CODE -ne 0 ]]; then
+	echo "FAIL with code $CODE"
+	FAILED=1
+else
+	echo "OK"
+fi
+echo
+
+
+echo "./jaydiff --report --stream:"
+./jaydiff --report --stream \
+	test_files/lhs_stream.json test_files/rhs_stream.json
+CODE=$?
+if [[ $CODE -ne 6 ]]; then
+	echo "FAIL with code $CODE"
+	FAILED=1
+else
+	echo "OK"
+fi
+echo
+
+echo "./jaydiff --ignore-excess --ignore-values --json --report --stream-validate:"
+./jaydiff --ignore-excess --ignore-values --json --report --stream-validate \
+	test_files/lhs_validate.json test_files/rhs_validate.json
+CODE=$?
+if [[ $CODE -ne 6 ]]; then
+	echo "FAIL with code $CODE"
+	FAILED=1
+else
+	echo "OK"
+fi
+echo
+
 if [[ $FAILED -ne 0 ]]; then
 	echo "$FAILED errors"
 	exit 1
