@@ -182,8 +182,7 @@ func executeMap(keyStr pathKey, tail []pathPart, v reflect.Value) (interface{}, 
 type pathKind int
 
 const (
-	pathKindUnknown pathKind = iota
-	pathKindIndex
+	pathKindIndex pathKind = iota
 	pathKindKey
 )
 
