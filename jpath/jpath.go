@@ -55,6 +55,8 @@ func isUnescapedQuote(s string) bool {
 	return s[0] != '\\' && s[1] == '"'
 }
 
+const keySpecials = "[].\":"
+
 // HasSuffix tests whether the string s ends with suffix, ignoring indices in brackets.
 func HasSuffix(s, suffix string) bool {
 	stripped := StripIndices(s)
@@ -67,12 +69,12 @@ func HasSuffix(s, suffix string) bool {
 func EscapeKey(v interface{}) string {
 	s, ok := v.(string)
 	if !ok {
-		return fmt.Sprintf("%v", v)
+		s = fmt.Sprintf("%v", v)
 	}
-	if s != "" && !strings.ContainsAny(s, "[].\"") {
+	if s != "" && !strings.ContainsAny(s, keySpecials) {
 		return s
 	}
-	return fmt.Sprintf("%q", s)
+	return strconv.Quote(s)
 }
 
 func Split(path string) (head, tail string) {
@@ -114,57 +116,56 @@ func getKey(s string, kind reflect.Kind) (reflect.Value, error) {
 }
 
 func ExecutePath(path string, i interface{}) (interface{}, error) {
-	// TODO(yazgazan): better errors
-	head, tail := Split(path)
-	if head == "" {
+	pp, _, err := parsePath(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return executePath(pp, i)
+}
+
+func executePath(path []pathPart, i interface{}) (interface{}, error) {
+	if len(path) == 0 {
 		return i, nil
 	}
+	head, tail := path[0], path[1:]
 
 	v := reflect.ValueOf(i)
 
-	switch head[0] {
+	switch head.Kind() {
 	default:
 		return nil, ErrInvalidPath
-	case '[':
-		return executeSlice(head, tail, v)
-	case '.':
-		return executeMap(head, tail, v)
+	case pathKindIndex:
+		return executeSlice(head.(pathIndex), tail, v)
+	case pathKindKey:
+		return executeMap(head.(pathKey), tail, v)
 	}
 }
 
-func executeSlice(head, tail string, v reflect.Value) (interface{}, error) {
+func executeSlice(idx pathIndex, tail []pathPart, v reflect.Value) (interface{}, error) {
 	if v.Kind() != reflect.Slice {
 		return nil, ErrNotSlice
 	}
 	if v.IsNil() {
 		return nil, ErrNil
 	}
-	if head[len(head)-1] != ']' {
-		return nil, ErrInvalidPath
-	}
-	index, err := strconv.Atoi(head[1 : len(head)-1])
-	if err != nil {
-		return nil, err
-	}
-	if index >= v.Len() {
+
+	if int(idx) >= v.Len() {
 		return nil, ErrOutOfBounds
 	}
-	val := v.Index(index)
+	val := v.Index(int(idx))
 	if !val.CanInterface() {
 		return nil, ErrInvalidInterface
 	}
-	return ExecutePath(tail, val.Interface())
+	return executePath(tail, val.Interface())
 }
 
-func executeMap(head, tail string, v reflect.Value) (interface{}, error) {
+func executeMap(keyStr pathKey, tail []pathPart, v reflect.Value) (interface{}, error) {
 	if v.Kind() != reflect.Map {
 		return nil, ErrNotMap
 	}
-	keyStr := head[1:]
-	if keyStr == "" {
-		return nil, ErrInvalidPath
-	}
-	key, err := getKey(keyStr, v.Type().Key().Kind())
+
+	key, err := getKey(string(keyStr), v.Type().Key().Kind())
 	if err != nil {
 		return nil, err
 	}
@@ -175,5 +176,137 @@ func executeMap(head, tail string, v reflect.Value) (interface{}, error) {
 	if !val.CanInterface() {
 		return nil, ErrInvalidInterface
 	}
-	return ExecutePath(tail, val.Interface())
+	return executePath(tail, val.Interface())
+}
+
+type pathKind int
+
+const (
+	pathKindUnknown pathKind = iota
+	pathKindIndex
+	pathKindKey
+)
+
+type pathPart interface {
+	Kind() pathKind
+	String() string
+}
+
+type pathIndex int
+
+func (i pathIndex) Kind() pathKind {
+	return pathKindIndex
+}
+
+func (i pathIndex) String() string {
+	return "[" + strconv.Itoa(int(i)) + "]"
+}
+
+type pathKey string
+
+func (k pathKey) Kind() pathKind {
+	return pathKindKey
+}
+
+func (k pathKey) String() string {
+	return "." + EscapeKey(string(k))
+}
+
+func parsePath(path string) ([]pathPart, int, error) {
+	var (
+		part pathPart
+		i    int
+		err  error
+	)
+
+	if path == "" {
+		return nil, 0, nil
+	}
+
+	switch path[0] {
+	default:
+		return nil, 0, nil
+	case '.':
+		part, i, err = parseKey(path)
+	case '[':
+		part, i, err = parseIndex(path)
+	}
+	if err != nil {
+		return nil, 0, err
+	}
+	path = path[i:]
+
+	parts, j, err := parsePath(path)
+	if err != nil {
+		return []pathPart{part}, i + j, err
+	}
+
+	return append([]pathPart{part}, parts...), i + j, nil
+}
+
+func parseKey(path string) (pathKey, int, error) {
+	i := 1
+	if len(path) <= 1 {
+		return "", i, errors.New("expected key after '.'")
+	}
+
+	if path[i] == '"' {
+		return parseQuotedKey(path)
+	}
+
+	for ; i < len(path) && !strings.ContainsAny(keySpecials, path[i:i+1]); i++ {
+	}
+
+	return pathKey(path[1:i]), i, nil
+}
+
+func parseQuotedKey(path string) (pathKey, int, error) {
+	i := 1
+
+	i++
+	escaping := false
+	for ; i < len(path); i++ {
+		if escaping {
+			escaping = false
+			continue
+		}
+		if path[i] == '\\' {
+			escaping = true
+			continue
+		}
+		if path[i] == '"' {
+			break
+		}
+	}
+	if escaping || i >= len(path) {
+		return "", i, errors.New("malformed key")
+	}
+	s, err := strconv.Unquote(path[1 : i+1])
+	if err != nil {
+		fmt.Println(path[1 : i+1])
+		return "", i, err
+	}
+
+	return pathKey(s), i + 1, nil
+}
+
+func parseIndex(path string) (pathIndex, int, error) {
+	i := 1
+	if len(path) < 3 {
+		return 0, i, errors.New("expected index to be of the form [number]")
+	}
+
+	for ; i < len(path) && path[i] != ']'; i++ {
+	}
+
+	if i == len(path) {
+		return 0, i, errors.New("expected index to be of the form [number]")
+	}
+
+	n, err := strconv.ParseInt(path[1:i], 10, strconv.IntSize)
+	if err != nil {
+		return 0, i, err
+	}
+
+	return pathIndex(n), i + 1, nil
 }
