@@ -124,7 +124,7 @@ func ExecutePath(path string, i interface{}) (interface{}, error) {
 	return executePath(pp, i)
 }
 
-func executePath(path []pathPart, i interface{}) (interface{}, error) {
+func executePath(path []PathPart, i interface{}) (interface{}, error) {
 	if len(path) == 0 {
 		return i, nil
 	}
@@ -135,14 +135,14 @@ func executePath(path []pathPart, i interface{}) (interface{}, error) {
 	switch head.Kind() {
 	default:
 		return nil, ErrInvalidPath
-	case pathKindIndex:
-		return executeSlice(head.(pathIndex), tail, v)
-	case pathKindKey:
-		return executeMap(head.(pathKey), tail, v)
+	case PathKindIndex:
+		return executeSlice(head.(PathIndex), tail, v)
+	case PathKindKey:
+		return executeMap(head.(PathKey), tail, v)
 	}
 }
 
-func executeSlice(idx pathIndex, tail []pathPart, v reflect.Value) (interface{}, error) {
+func executeSlice(idx PathIndex, tail []PathPart, v reflect.Value) (interface{}, error) {
 	if v.Kind() != reflect.Slice {
 		return nil, ErrNotSlice
 	}
@@ -160,17 +160,17 @@ func executeSlice(idx pathIndex, tail []pathPart, v reflect.Value) (interface{},
 	return executePath(tail, val.Interface())
 }
 
-func executeMap(keyStr pathKey, tail []pathPart, v reflect.Value) (interface{}, error) {
+func executeMap(keyStr PathKey, tail []PathPart, v reflect.Value) (interface{}, error) {
 	if v.Kind() != reflect.Map {
 		return nil, ErrNotMap
 	}
 
+	if v.IsNil() {
+		return nil, ErrNil
+	}
 	key, err := getKey(string(keyStr), v.Type().Key().Kind())
 	if err != nil {
 		return nil, err
-	}
-	if v.IsNil() {
-		return nil, ErrNil
 	}
 	val := v.MapIndex(key)
 	if !val.CanInterface() {
@@ -179,52 +179,67 @@ func executeMap(keyStr pathKey, tail []pathPart, v reflect.Value) (interface{}, 
 	return executePath(tail, val.Interface())
 }
 
-type pathKind int
+//go:generate stringer -type PathKind
+type PathKind int
 
 const (
-	pathKindIndex pathKind = iota
-	pathKindKey
+	PathKindIndex PathKind = iota
+	PathKindKey
 )
 
-type pathPart interface {
-	Kind() pathKind
+type PathPart interface {
+	Kind() PathKind
 	String() string
 }
 
-type pathIndex int
+type PathIndex int
 
-func (i pathIndex) Kind() pathKind {
-	return pathKindIndex
+func (i PathIndex) Kind() PathKind {
+	return PathKindIndex
 }
 
-func (i pathIndex) String() string {
+func (i PathIndex) String() string {
 	return "[" + strconv.Itoa(int(i)) + "]"
 }
 
-type pathKey string
+type PathKey string
 
-func (k pathKey) Kind() pathKind {
-	return pathKindKey
+func (k PathKey) Kind() PathKind {
+	return PathKindKey
 }
 
-func (k pathKey) String() string {
+func (k PathKey) String() string {
 	return "." + EscapeKey(string(k))
 }
 
-func parsePath(path string) ([]pathPart, int, error) {
+type Path []PathPart
+
+func Parse(path string) (Path, error) {
+	pp, i, err := parsePath(path)
+	if err != nil {
+		return nil, err
+	}
+	if i != len(path) {
+		return nil, fmt.Errorf("parsing path: unexpected %q", path[i:])
+	}
+
+	return pp, nil
+}
+
+func parsePath(path string) (Path, int, error) {
 	var (
-		part pathPart
+		part PathPart
 		i    int
 		err  error
 	)
 
 	if path == "" {
-		return nil, 0, nil
+		return Path{}, 0, nil
 	}
 
 	switch path[0] {
 	default:
-		return nil, 0, nil
+		return Path{}, 0, nil
 	case '.':
 		part, i, err = parseKey(path)
 	case '[':
@@ -237,13 +252,13 @@ func parsePath(path string) ([]pathPart, int, error) {
 
 	parts, j, err := parsePath(path)
 	if err != nil {
-		return []pathPart{part}, i + j, err
+		return Path{part}, i + j, err
 	}
 
-	return append([]pathPart{part}, parts...), i + j, nil
+	return append(Path{part}, parts...), i + j, nil
 }
 
-func parseKey(path string) (pathKey, int, error) {
+func parseKey(path string) (PathKey, int, error) {
 	i := 1
 	if len(path) <= 1 {
 		return "", i, errors.New("expected key after '.'")
@@ -256,10 +271,10 @@ func parseKey(path string) (pathKey, int, error) {
 	for ; i < len(path) && !strings.ContainsAny(keySpecials, path[i:i+1]); i++ {
 	}
 
-	return pathKey(path[1:i]), i, nil
+	return PathKey(path[1:i]), i, nil
 }
 
-func parseQuotedKey(path string) (pathKey, int, error) {
+func parseQuotedKey(path string) (PathKey, int, error) {
 	i := 1
 
 	i++
@@ -286,10 +301,10 @@ func parseQuotedKey(path string) (pathKey, int, error) {
 		return "", i, err
 	}
 
-	return pathKey(s), i + 1, nil
+	return PathKey(s), i + 1, nil
 }
 
-func parseIndex(path string) (pathIndex, int, error) {
+func parseIndex(path string) (PathIndex, int, error) {
 	i := 1
 	if len(path) < 3 {
 		return 0, i, errors.New("expected index to be of the form [number]")
@@ -307,5 +322,5 @@ func parseIndex(path string) (pathIndex, int, error) {
 		return 0, i, err
 	}
 
-	return pathIndex(n), i + 1, nil
+	return PathIndex(n), i + 1, nil
 }

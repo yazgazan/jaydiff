@@ -157,3 +157,27 @@ func TestIsMissing(t *testing.T) {
 		}
 	}
 }
+
+func TestValueWalk(t *testing.T) {
+	t.Run("returning error", func(t *testing.T) {
+		walkError := errors.New("fake error")
+
+		diff, err := (&Builder{}).Add("", 5).Build()
+		if err != nil {
+			t.Errorf(`Builder{}.Add("", 5): unexpected error: %s`, err)
+			return
+		}
+
+		_, err = Walk(diff, func(parent Differ, diff Differ, path string) (Differ, error) {
+			if _, ok := diff.(valueExcess); ok {
+				return nil, walkError
+			}
+
+			return nil, nil
+		})
+
+		if err != walkError {
+			t.Errorf("Walk(...): expected fake error, got %v", err)
+		}
+	})
+}

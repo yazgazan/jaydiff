@@ -97,27 +97,74 @@ func TestSplit(t *testing.T) {
 	}
 }
 
-func TestExecutePath(t *testing.T) {
+func TestGetKey(t *testing.T) {
 	for _, test := range []struct {
-		I        interface{}
-		Path     string
-		Expected interface{}
+		S           string
+		Kind        reflect.Kind
+		Expected    interface{}
+		ExpectError bool
 	}{
 		{
-			map[string]int{"foo": 42},
-			".foo",
-			42,
+			S:        "foo",
+			Kind:     reflect.String,
+			Expected: "foo",
 		},
 		{
-			map[string][]int{
+			S:        "42",
+			Kind:     reflect.Int,
+			Expected: 42,
+		},
+		{
+			S:           "foo",
+			Kind:        reflect.Struct,
+			ExpectError: true,
+		},
+		{
+			S:           "foo",
+			Kind:        reflect.Int,
+			ExpectError: true,
+		},
+	} {
+		got, err := getKey(test.S, test.Kind)
+		if test.ExpectError && err == nil {
+			t.Errorf("getKey(%q, %v): expected error, got nil", test.S, test.Kind)
+		}
+		if !test.ExpectError && err != nil {
+			t.Errorf("getKey(%q, %v): unexpected error: %v", test.S, test.Kind, err)
+		}
+		if err != nil || test.ExpectError {
+			continue
+		}
+
+		i := got.Interface()
+		if !reflect.DeepEqual(i, test.Expected) {
+			t.Errorf("getKey(%q, %v) = %v, expected %v", test.S, test.Kind, got, test.Expected)
+		}
+	}
+}
+
+func TestExecutePath(t *testing.T) {
+	for _, test := range []struct {
+		I           interface{}
+		Path        string
+		Expected    interface{}
+		ExpectError bool
+	}{
+		{
+			I:        map[string]int{"foo": 42},
+			Path:     ".foo",
+			Expected: 42,
+		},
+		{
+			I: map[string][]int{
 				"foo": []int{1, 2, 3},
 				"bar": []int{4, 5, 6},
 			},
-			".foo[1]",
-			2,
+			Path:     ".foo[1]",
+			Expected: 2,
 		},
 		{
-			map[string][]map[int]string{
+			I: map[string][]map[int]string{
 				"foo": []map[int]string{
 					map[int]string{
 						23: "ha",
@@ -125,45 +172,85 @@ func TestExecutePath(t *testing.T) {
 					},
 				},
 			},
-			".foo[0].23",
-			"ha",
+			Path:     ".foo[0].23",
+			Expected: "ha",
 		},
 		{
-			map[string]interface{}{
+			I: map[string]interface{}{
 				"foo": []interface{}{
 					42,
 					23,
 				},
 			},
-			`."foo"[1]`,
-			23,
+			Path:     `."foo"[1]`,
+			Expected: 23,
 		},
 		{
-			map[string]interface{}{
+			I: map[string]interface{}{
 				"foo[0]": []interface{}{
 					42,
 					23,
 				},
 			},
-			`."foo[0]"[1]`,
-			23,
+			Path:     `."foo[0]"[1]`,
+			Expected: 23,
 		},
 		{
-			[]interface{}{
+			I: []interface{}{
 				map[string]interface{}{
 					"foo": 23,
 					"bar": 42,
 				},
 			},
-			"[0].foo",
-			23,
+			Path:     "[0].foo",
+			Expected: 23,
+		},
+		{
+			I: []interface{}{
+				42,
+			},
+			Path:        ".foo",
+			ExpectError: true,
+		},
+		{
+			I: map[string]interface{}{
+				"foo": 42,
+			},
+			Path:        "[2]",
+			ExpectError: true,
+		},
+		{
+			I:           []interface{}(nil),
+			Path:        "[2]",
+			ExpectError: true,
+		},
+		{
+			I:           map[string]interface{}(nil),
+			Path:        ".foo",
+			ExpectError: true,
+		},
+		{
+			I:           map[struct{}]interface{}{},
+			Path:        ".foo",
+			ExpectError: true,
+		},
+		{
+			I:           []interface{}{},
+			Path:        "[2]",
+			ExpectError: true,
 		},
 	} {
 		got, err := ExecutePath(test.Path, test.I)
-		if err != nil {
-			t.Errorf("ExecutePath(%q, %+v): unexpected error: %s", test.Path, test.I, err)
+		if !test.ExpectError && err != nil {
+			t.Errorf("ExecutePath(%q, %+v): unexpected error: %v", test.Path, test.I, err)
+		}
+		if test.ExpectError && err == nil {
+			t.Errorf("ExecutePath(%q, %+v): expected error: got nil", test.Path, test.I)
+		}
+		if test.ExpectError || err != nil {
 			continue
 		}
+
 		if !reflect.DeepEqual(got, test.Expected) {
 			t.Errorf("ExecutePath(%q, %+v) = %+v, expected %+v", test.Path, test.I, got, test.Expected)
 		}
@@ -178,10 +265,68 @@ func TestExecutePath(t *testing.T) {
 	}
 }
 
+type invalidPathPart struct{}
+
+func (p invalidPathPart) Kind() PathKind {
+	return -1
+}
+
+func (p invalidPathPart) String() string {
+	return "<invalid>"
+}
+
+func TestExecutePath2(t *testing.T) {
+	t.Run("invalid path", func(t *testing.T) {
+		_, err := executePath(Path{invalidPathPart{}}, 42)
+
+		if err == nil {
+			t.Error("executePath(Path{invalidPathPart{}}): expected error, got nil")
+		}
+	})
+}
+
+func TestExecuteSlice(t *testing.T) {
+	t.Run("accessing private field", func(t *testing.T) {
+		type Foo struct {
+			private []int
+		}
+
+		f := Foo{
+			private: []int{1, 2, 3},
+		}
+		v := reflect.ValueOf(f).FieldByName("private")
+
+		_, err := executeSlice(PathIndex(0), Path{}, v)
+		if err == nil {
+			t.Error("executeSlice(0, [], fromPrivateField): expected error, got nil")
+		}
+	})
+}
+
+func TestExecuteMap(t *testing.T) {
+	t.Run("accessing private field", func(t *testing.T) {
+		type Foo struct {
+			private map[string]int
+		}
+
+		f := Foo{
+			private: map[string]int{
+				"foo": 42,
+			},
+		}
+		v := reflect.ValueOf(f).FieldByName("private")
+
+		_, err := executeMap(PathKey("foo"), Path{}, v)
+		if err == nil {
+			t.Error(`executeMap("foo", [], fromPrivateField): expected error, got nil`)
+		}
+	})
+}
+
 func TestParseKey(t *testing.T) {
 	for _, test := range []struct {
 		In          string
-		Expected    pathKey
+		Expected    PathKey
 		I           int
 		ExpectError bool
 	}{
@@ -261,7 +406,7 @@ func TestParseKey(t *testing.T) {
 func TestParseIndex(t *testing.T) {
 	for _, test := range []struct {
 		In          string
-		Expected    pathIndex
+		Expected    PathIndex
 		I           int
 		ExpectError bool
 	}{
@@ -326,58 +471,63 @@ func TestParseIndex(t *testing.T) {
 func TestParsePath(t *testing.T) {
 	for _, test := range []struct {
 		In          string
-		Expected    []pathPart
+		Expected    Path
 		I           int
 		ExpectError bool
 	}{
 		{
 			In: ".foo.bar",
-			Expected: []pathPart{
-				pathKey("foo"),
-				pathKey("bar"),
+			Expected: Path{
+				PathKey("foo"),
+				PathKey("bar"),
 			},
 			I: 8,
 		},
 		{
 			In: "[2]",
-			Expected: []pathPart{
-				pathIndex(2),
+			Expected: Path{
+				PathIndex(2),
 			},
 			I: 3,
 		},
 		{
 			In: "[2].foo: bar",
-			Expected: []pathPart{
-				pathIndex(2),
-				pathKey("foo"),
+			Expected: Path{
+				PathIndex(2),
+				PathKey("foo"),
 			},
 			I: 7,
 		},
 		{
 			In: `[2]."": bar`,
-			Expected: []pathPart{
-				pathIndex(2),
-				pathKey(""),
+			Expected: Path{
+				PathIndex(2),
+				PathKey(""),
 			},
 			I: 6,
 		},
 		{
 			In: ".foo.bar: ",
-			Expected: []pathPart{
-				pathKey("foo"),
-				pathKey("bar"),
+			Expected: Path{
+				PathKey("foo"),
+				PathKey("bar"),
 			},
 			I: 8,
 		},
 		{
 			In: `.foo.bar[42]."hello world!": `,
-			Expected: []pathPart{
-				pathKey("foo"),
-				pathKey("bar"),
-				pathIndex(42),
-				pathKey("hello world!"),
+			Expected: Path{
+				PathKey("foo"),
+				PathKey("bar"),
+				PathIndex(42),
+				PathKey("hello world!"),
 			},
 			I: 27,
+		},
+		{
+			In:       ": ",
+			Expected: Path{},
+			I:        0,
 		},
 		{
 			In:          `.foo.bar[42]."hello world!: `,
@@ -403,4 +553,154 @@ func TestParsePath(t *testing.T) {
 			t.Errorf("parsePath(%q) = [%d], expected [%d]", test.In, i, test.I)
 		}
 	}
+}
+
+func TestParse(t *testing.T) {
+	for _, test := range []struct {
+		In          string
+		Expected    Path
+		ExpectError bool
+	}{
+		{
+			In: ".foo.bar",
+			Expected: Path{
+				PathKey("foo"),
+				PathKey("bar"),
+			},
+		},
+		{
+			In: "[2]",
+			Expected: Path{
+				PathIndex(2),
+			},
+		},
+		{
+			In:          "[2].foo: bar",
+			ExpectError: true,
+		},
+		{
+			In: `[2].""`,
+			Expected: Path{
+				PathIndex(2),
+				PathKey(""),
+			},
+		},
+		{
+			In: ".foo.bar",
+			Expected: Path{
+				PathKey("foo"),
+				PathKey("bar"),
+			},
+		},
+		{
+			In: `.foo.bar[42]."hello world!"`,
+			Expected: Path{
+				PathKey("foo"),
+				PathKey("bar"),
+				PathIndex(42),
+				PathKey("hello world!"),
+			},
+		},
+		{
+			In:       "",
+			Expected: Path{},
+		},
+		{
+			In:          `.foo."ba\xzar"`,
+			ExpectError: true,
+		},
+		{
+			In:          `.foo.bar[42]."hello world!: `,
+			ExpectError: true,
+		},
+	} {
+		got, err := Parse(test.In)
+		if test.ExpectError && err == nil {
+			t.Errorf("parsePath(%q): expected error, got nil", test.In)
+			continue
+		}
+		if !test.ExpectError && err != nil {
+			t.Errorf("parsePath(%q): unexpected error: %v", test.In, err)
+		}
+		if err != nil {
+			continue
+		}
+
+		if !reflect.DeepEqual(got, test.Expected) {
+			t.Errorf("parsePath(%q) = %v, expected %v", test.In, got, test.Expected)
+		}
+	}
+}
+
+func TestPathIndex(t *testing.T) {
+	t.Run("Kind()", func(t *testing.T) {
+		k := PathIndex(2).Kind()
+
+		if k != PathKindIndex {
+			t.Errorf("PathIndex().Kind() = %v, expected %v", k, PathKindIndex)
+		}
+	})
+
+	t.Run("String()", func(t *testing.T) {
+		s := PathIndex(2).String()
+
+		if s != "[2]" {
+			t.Errorf("PathIndex(2).String() = %q, expected %q", s, "[2]")
+		}
+	})
+}
+
+func TestPathKey(t *testing.T) {
+	t.Run("Kind()", func(t *testing.T) {
+		k := PathKey("foo").Kind()
+
+		if k != PathKindKey {
+			t.Errorf("PathKey().Kind() = %v, expected %v", k, PathKindKey)
+		}
+	})
+
+	t.Run("String()", func(t *testing.T) {
+		s := PathKey("foo").String()
+
+		if s != ".foo" {
+			t.Errorf(`PathKey("foo").String() = %q, expected %q`, s, ".foo")
+		}
+	})
+
+	t.Run("String() escaped", func(t *testing.T) {
+		s := PathKey(`foo"`).String()
+
+		if s != `."foo\""` {
+			t.Errorf(`PathKey("foo").String() = %q, expected %q`, s, `."foo\""`)
+		}
+	})
+}
+
+func TestPathKind(t *testing.T) {
+	t.Run("String()", func(t *testing.T) {
+
+		for _, test := range []struct {
+			In       PathKind
+			Expected string
+		}{
+			{
+				In:       PathKindIndex,
+				Expected: "PathKindIndex",
+			},
+			{
+				In:       PathKindKey,
+				Expected: "PathKindKey",
+			},
+			{
+				In:       PathKind(-1),
+				Expected: "PathKind(-1)",
+			},
+		} {
+			got := test.In.String()
+
+			if got != test.Expected {
+				t.Errorf("PathKind(%d).String() = %q, expected %q", int(test.In), got, test.Expected)
+			}
+		}
+	})
 }
