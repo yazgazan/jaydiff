@@ -27,18 +27,22 @@ Usage:
   jaydiff [OPTIONS] FILE_1 FILE_2
 
 Application Options:
-  -i, --ignore=        paths to ignore (glob)
-      --indent=        indent string (default: "\t")
-  -t, --show-types     show types
-      --json           json-style output
-      --ignore-excess  ignore excess keys and arrey elements
-      --ignore-values  ignore scalar's values (only type is compared)
-  -r, --report         output report format
-      --slice-myers    use myers algorithm for slices
-  -v, --version        print release version
+  -i, --ignore=               paths to ignore (glob)
+      --indent=               indent string (default: "\t")
+  -t, --show-types            show types
+      --json                  json-style output
+      --ignore-excess         ignore excess keys and array elements
+      --ignore-values         ignore scalar's values (only type is compared)
+  -r, --report                output report format
+      --slice-myers           use myers algorithm for slices
+      --stream                treat FILE_1 and FILE_2 as JSON streams
+      --stream-lines          read JSON stream line by line (expecting 1 JSON value per line)
+      --stream-ignore-excess  ignore excess values in JSON stream
+      --stream-validate       compare FILE_2 JSON stream against FILE_1 single value
+  -v, --version               print release version
 
 Help Options:
-  -h, --help           Show this help message
+  -h, --help                  Show this help message
 ```
 
 ### Examples
