@@ -22,3 +22,12 @@ func TestUnsupported(t *testing.T) {
 		}
 	}
 }
+
+func TestInvalidStream(t *testing.T) {
+	type invalidStream struct{}
+	s := errInvalidStream{invalidStream{}}.Error()
+
+	if !strings.Contains(s, "invalidStream") {
+		t.Errorf("errInvalidStream{invalidStream{}}.Error() = %q, expected it to contain %q", s, "invalidStream")
+	}
+}
