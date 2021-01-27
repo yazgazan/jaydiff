@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 type mockedStream struct {
@@ -36,6 +37,8 @@ func (s erroringMockedStream) NextValue() (interface{}, error) {
 }
 
 func TestDiff(t *testing.T) {
+	type CustomType int
+
 	for _, test := range []struct {
 		LHS   interface{}
 		RHS   interface{}
@@ -109,6 +112,98 @@ func TestDiff(t *testing.T) {
 		{
 			LHS:  mockStream(1, 2, 3),
 			RHS:  mockStream(4, 5, 6),
+			Want: ContentDiffer,
+		},
+		{
+			LHS:  CustomType(1),
+			RHS:  CustomType(1),
+			Want: Identical,
+		},
+		{
+			LHS:  CustomType(1),
+			RHS:  CustomType(2),
+			Want: ContentDiffer,
+		},
+		{
+			LHS:  CustomType(1),
+			RHS:  2,
+			Want: ContentDiffer,
+		},
+		{
+			LHS:  new(CustomType),
+			RHS:  new(CustomType),
+			Want: Identical,
+		},
+		{
+			LHS:  time.Time{},
+			RHS:  time.Time{},
+			Want: Identical,
+		},
+		{
+			LHS:  new(time.Time),
+			RHS:  new(time.Time),
+			Want: Identical,
+		},
+		{
+			LHS: struct {
+				Foo *int
+			}{},
+			RHS: struct {
+				Foo *int
+			}{},
+			Want: Identical,
+		},
+		{
+			LHS: struct {
+				Foo *int
+			}{
+				Foo: new(int),
+			},
+			RHS: struct {
+				Foo *int
+			}{},
+			Want: ContentDiffer,
+		},
+		{
+			LHS: struct {
+				Foo *int
+			}{
+				Foo: func() *int {
+					i := 42
+
+					return &i
+				}(),
+			},
+			RHS: struct {
+				Foo *int
+			}{
+				Foo: func() *int {
+					i := 42
+
+					return &i
+				}(),
+			},
+			Want: Identical,
+		},
+		{
+			LHS: struct {
+				Foo *int
+			}{
+				Foo: func() *int {
+					i := 42
+
+					return &i
+				}(),
+			},
+			RHS: struct {
+				Foo *int
+			}{
+				Foo: func() *int {
+					i := 84
+
+					return &i
+				}(),
+			},
 			Want: ContentDiffer,
 		},
 	} {

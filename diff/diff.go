@@ -46,7 +46,7 @@ func diff(c config, lhs, rhs interface{}, visited *visited) (Differ, error) {
 	lhsVal, lhs := indirectValueOf(lhs)
 	rhsVal, rhs := indirectValueOf(rhs)
 
-	if d, ok := nilCheck(lhs, rhs); ok {
+	if d, ok := nilCheck(lhsVal, rhsVal, lhs, rhs); ok {
 		return d, nil
 	}
 
@@ -115,12 +115,15 @@ func valueIsScalar(v reflect.Value) bool {
 	}
 }
 
-func nilCheck(lhs, rhs interface{}) (Differ, bool) {
-	if lhs == nil && rhs == nil {
-		return scalar{lhs, rhs}, true
+func nilCheck(lhsVal, rhsVal reflect.Value, lhs, rhs interface{}) (Differ, bool) {
+	lhsNil := lhs == nil || (lhsVal.Kind() == reflect.Ptr && lhsVal.IsNil())
+	rhsNil := rhs == nil || (rhsVal.Kind() == reflect.Ptr && rhsVal.IsNil())
+
+	if lhsNil && rhsNil {
+		return scalar{lhsVal, rhsVal}, true
 	}
-	if lhs == nil || rhs == nil {
-		return types{lhs, rhs}, true
+	if lhsNil || rhsNil {
+		return types{lhsVal, rhsVal}, true
 	}
 
 	return nil, false
