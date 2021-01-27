@@ -51,7 +51,7 @@ rm -rf build dist && mkdir -p build dist
 
 # Build
 GOARM=6 gox -ldflags "-s -w -X main.Version=${LATEST_TAG}" \
-    -rebuild \
+    -osarch '!darwin/386'  -rebuild \
     -output "build/{{.Dir}}-${LATEST_TAG}-{{.OS}}-{{.Arch}}/${NAME}" \
 	.
 
