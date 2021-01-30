@@ -6,7 +6,7 @@ package diff
 func Report(d Differ, outConf Output) ([]string, error) {
 	var errs []string
 
-	_, err := Walk(d, func(parent, diff Differ, path string) (Differ, error) {
+	_, err := Walk(d, func(_, diff Differ, path string) (Differ, error) {
 		switch diff.Diff() {
 		case Identical:
 			return nil, nil
