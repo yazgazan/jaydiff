@@ -6,7 +6,7 @@ import (
 
 	"github.com/jessevdk/go-flags"
 	"github.com/yazgazan/jaydiff/diff"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 type files struct {
@@ -76,7 +76,7 @@ func (c *config) InferFlags() {
 		c.Stream = true
 	}
 
-	c.output.Colorized = terminal.IsTerminal(int(os.Stdout.Fd()))
+	c.output.Colorized = term.IsTerminal(int(os.Stdout.Fd()))
 }
 
 func (c config) Opts() []diff.ConfigOpt {

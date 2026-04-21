@@ -7,7 +7,7 @@ require (
 	github.com/mattn/go-colorable v0.0.9 // indirect
 	github.com/mattn/go-isatty v0.0.4 // indirect
 	github.com/mb0/diff v0.0.0-20131118162322-d8d9a906c24d
-	golang.org/x/crypto v0.21.0
+	golang.org/x/term v0.18.0
 )
 
 go 1.10
