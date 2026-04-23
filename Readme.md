@@ -18,7 +18,10 @@ A JSON diff utility.
 ### From source
 
 - Have go 1.11 or greater installed: [golang.org](https://golang.org/doc/install)
-- run `go get -u github.com/yazgazan/jaydiff`
+- Go 1.16 or earlier
+  - run `go get -u github.com/yazgazan/jaydiff`
+- Go 1.17 or later
+  - run `go install github.com/yazgazan/jaydiff@latest`
 
 ## Usage
 
