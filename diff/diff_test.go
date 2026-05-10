@@ -878,6 +878,8 @@ func TestReport(t *testing.T) {
 }
 
 func testStrings(context string, t *testing.T, wants [][]string, ss []string, indented string) {
+	t.Helper()
+
 	for i, want := range wants {
 		s := ss[i]
 

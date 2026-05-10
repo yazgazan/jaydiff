@@ -1,12 +1,14 @@
 package diff
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
 
 	myersdiff "github.com/mb0/diff"
+	"github.com/yazgazan/jaydiff/jpath"
 )
 
 type slice struct {
@@ -254,6 +256,102 @@ func (s slice) StringIndent(key, prefix string, conf Output) string {
 	}
 
 	return ""
+}
+
+func (s *slice) Add(path jpath.Path, i interface{}) error {
+	if len(path) == 0 {
+		return errors.New("cannot add value to empty path")
+	}
+	idx, ok := path[0].(jpath.PathIndex)
+	if !ok {
+		return fmt.Errorf("cannot add value to %T path", path[0])
+	}
+
+	return s.add(int(idx), path[1:], i)
+}
+
+func (s *slice) add(idx int, path jpath.Path, i interface{}) error {
+	if len(s.diffs) <= idx {
+		s.addIgnoreUntil(idx)
+	}
+	d := s.diffs[idx]
+	if len(path) > 0 && IsIgnore(d) {
+		d = emptyContainer(path[0])
+		s.diffs[idx] = d
+	}
+	if len(path) > 0 {
+		diffBuilder, ok := d.(DiffBuilder)
+		if !ok {
+			return fmt.Errorf("cannot add value to %T(%+v)", d, d)
+		}
+		return diffBuilder.Add(path, i)
+	}
+
+	if len(path) == 0 && IsIgnore(d) {
+		s.diffs[idx] = sliceExcess{
+			value: i,
+		}
+
+		return nil
+	}
+
+	if t, ok := d.(sliceMissing); ok {
+		s.diffs[idx] = valueDiffers{
+			lhs: t.value,
+			rhs: i,
+		}
+
+		return nil
+	}
+
+	return fmt.Errorf("cannot add value to %T(%+v)", d, d)
+}
+
+func (s *slice) Delete(path jpath.Path, i interface{}) error {
+	if len(path) == 0 {
+		return errors.New("cannot delete value from empty path")
+	}
+	idx, ok := path[0].(jpath.PathIndex)
+	if !ok {
+		return fmt.Errorf("cannot delete value from %T path", path[0])
+	}
+
+	return s.delete(int(idx), path[1:], i)
+}
+
+func (s *slice) delete(idx int, path jpath.Path, i interface{}) error {
+	if len(s.diffs) <= idx {
+		s.addIgnoreUntil(idx)
+	}
+	d := s.diffs[idx]
+	if len(path) > 0 && IsIgnore(d) {
+		d = emptyContainer(path[0])
+		s.diffs[idx] = d
+	}
+	if len(path) > 0 {
+		diffBuilder, ok := d.(DiffBuilder)
+		if !ok {
+			return fmt.Errorf("cannot delete value from %T(%+v)", d, d)
+		}
+		return diffBuilder.Delete(path, i)
+	}
+
+	if len(path) == 0 && IsIgnore(d) {
+		s.diffs[idx] = sliceMissing{
+			value: i,
+		}
+
+		return nil
+	}
+
+	return fmt.Errorf("cannot delete value to %T(%+v)", d, d)
+}
+
+func (s *slice) addIgnoreUntil(idx int) {
+	for len(s.diffs) <= idx {
+		s.diffs = append(s.diffs, ignore{})
+		s.indices = append(s.indices, len(s.diffs)-1)
+	}
 }
 
 func (s slice) openString(key, prefix string, conf Output) string {

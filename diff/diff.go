@@ -3,6 +3,8 @@ package diff
 
 import (
 	"reflect"
+
+	"github.com/yazgazan/jaydiff/jpath"
 )
 
 // Type is used to specify the nature of the difference
@@ -25,6 +27,12 @@ type Differ interface {
 	Diff() Type
 	Strings() []string
 	StringIndent(key, prefix string, conf Output) string
+}
+
+type DiffBuilder interface {
+	Differ
+	Add(path jpath.Path, i interface{}) error
+	Delete(path jpath.Path, i interface{}) error
 }
 
 type diffFn func(c config, lhs, rhs interface{}, visited *visited) (Differ, error)

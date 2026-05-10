@@ -1,6 +1,7 @@
 package diff
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -175,6 +176,81 @@ func (m mapDiff) StringIndent(keyprefix, prefix string, conf Output) string {
 	}
 
 	return ""
+}
+
+func (m *mapDiff) Add(path jpath.Path, i interface{}) error {
+	if len(path) == 0 {
+		return errors.New("cannot add value to empty path")
+	}
+	key, ok := path[0].(jpath.PathKey)
+	if !ok {
+		return fmt.Errorf("cannot add value to %T path", path[0])
+	}
+
+	path = path[1:]
+	d, ok := m.diffs[string(key)]
+	if len(path) > 0 && !ok {
+		d = emptyContainer(path[0])
+		m.diffs[string(key)] = d
+	}
+	if len(path) > 0 {
+		diffBuilder, ok := d.(DiffBuilder)
+		if !ok {
+			return fmt.Errorf("cannot add value to %T(%+v)", d, d)
+		}
+		return diffBuilder.Add(path, i)
+	}
+
+	if len(path) == 0 && !ok {
+		m.diffs[string(key)] = mapExcess{
+			value: i,
+		}
+		return nil
+	}
+
+	if t, ok := d.(mapMissing); ok {
+		m.diffs[string(key)] = valueDiffers{
+			lhs: t.value,
+			rhs: i,
+		}
+
+		return nil
+	}
+
+	return fmt.Errorf("cannot add value to %T(%+v)", d, d)
+}
+
+func (m *mapDiff) Delete(path jpath.Path, i interface{}) error {
+	if len(path) == 0 {
+		return errors.New("cannot delete value from empty path")
+	}
+	key, ok := path[0].(jpath.PathKey)
+	if !ok {
+		return fmt.Errorf("cannot delete value from %T path", path[0])
+	}
+
+	path = path[1:]
+	d, ok := m.diffs[string(key)]
+	if len(path) > 0 && !ok {
+		d = emptyContainer(path[0])
+		m.diffs[string(key)] = d
+	}
+	if len(path) > 0 {
+		diffBuilder, ok := d.(DiffBuilder)
+		if !ok {
+			return fmt.Errorf("cannot delete value from %T(%+v)", d, d)
+		}
+		return diffBuilder.Delete(path, i)
+	}
+
+	if len(path) == 0 && !ok {
+		m.diffs[string(key)] = mapMissing{
+			value: i,
+		}
+		return nil
+	}
+
+	return fmt.Errorf("cannot delete value from %T(%+v)", d, d)
 }
 
 func (m mapDiff) openString(keyprefix, prefix string, conf Output) string {
